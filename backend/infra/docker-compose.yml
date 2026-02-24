@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16
+    container_name: traceguard-db
+    environment:
+      POSTGRES_DB: traceguard
+      POSTGRES_USER: traceguard
+      POSTGRES_PASSWORD: traceguard123
+    ports:
+      - "5432:5432"
+    volumes:
+      - traceguard_db_data:/var/lib/postgresql/data
+
+volumes:
+  traceguard_db_data:
