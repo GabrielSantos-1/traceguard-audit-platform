@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: traceguard
       POSTGRES_USER: traceguard
-      POSTGRES_PASSWORD: traceguard123
+      POSTGRES_PASSWORD: 
     ports:
       - "5432:5432"
     volumes:
