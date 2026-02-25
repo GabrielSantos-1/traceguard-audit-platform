@@ -1,2 +1,9 @@
+
+# build outputs
+**/target/
+
+# local env
+.env
+application-local.yml
 AGENTS.md
 backend/traceguard-api/AGENTS.md
