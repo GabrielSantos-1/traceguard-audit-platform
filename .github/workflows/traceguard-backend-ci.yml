@@ -1,0 +1,91 @@
+name: traceguard-backend-ci
+
+on:
+  pull_request:
+    paths:
+      - 'backend/traceguard-api/**'
+      - '.github/workflows/traceguard-backend-ci.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/traceguard-api/**'
+      - '.github/workflows/traceguard-backend-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+
+  build-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/traceguard-api
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: traceguard
+          POSTGRES_USER: traceguard
+          POSTGRES_PASSWORD: traceguard_ci_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U traceguard -d traceguard"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 3s
+          --health-retries 5
+    env:
+      SPRING_PROFILES_ACTIVE: test
+      DB_URL: jdbc:postgresql://localhost:5432/traceguard
+      DB_USERNAME: traceguard
+      DB_PASSWORD: traceguard_ci_password
+      REDIS_URL: redis://localhost:6379
+      RATE_LIMIT_REDIS_ENABLED: true
+      JWT_SECRET: ci_secret_that_is_at_least_32_characters_long
+      JWT_ISSUER: traceguard-api
+      JWT_AUDIENCE: traceguard-admin-api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+
+      - name: Build (skip tests)
+        run: ./mvnw -B -q -DskipTests package
+
+      - name: Run tests
+        run: ./mvnw -B -q test
+
+      - name: Validate artifact
+        run: |
+          test -f target/traceguard-api-0.0.1-SNAPSHOT.jar

@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TraceGuard - Painel Administrativo</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.fade-in { animation: fadeIn 0.3s ease-out; }
+.modal { animation: fadeIn 0.2s ease-out; }
+</style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans antialiased text-gray-900">
+
+<div id="app" class="min-h-screen"></div>
+
+<script>
+const API = '';
+const TOKEN_KEY = 'tg_token';
+const USER_KEY = 'tg_user';
+
+function getToken() { return localStorage.getItem(TOKEN_KEY); }
+function getUser() { return JSON.parse(localStorage.getItem(USER_KEY) || '{}'); }
+function isAuth() { return !!getToken(); }
+
+async function api(method, path, body) {
+  const headers = { 'Content-Type': 'application/json' };
+  const token = getToken();
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(`${API}${path}`, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message || data.message || 'Erro desconhecido');
+  return data;
+}
+
+async function login(email, password) {
+  const res = await api('POST', '/api/v1/auth/login', { email, password });
+  localStorage.setItem(TOKEN_KEY, res.data.accessToken);
+  localStorage.setItem(USER_KEY, JSON.stringify(res.data.user));
+  return res.data;
+}
+
+function logout() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+  render();
+}
+
+/* -------- Views -------- */
+
+function LoginView() {
+  return `
+    <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <div class="w-full max-w-md mx-4 fade-in">
+        <div class="bg-white rounded-2xl shadow-2xl p-8">
+          <div class="text-center mb-8">
+            <div class="w-14 h-14 bg-indigo-600 rounded-xl flex items-center justify-center mx-auto mb-4">
+              <i class="fas fa-shield-halved text-white text-2xl"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-900">TraceGuard</h1>
+            <p class="text-sm text-gray-500 mt-1">Painel Administrativo</p>
+          </div>
+          <form id="login-form" class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input type="email" name="email" value="admin@traceguard.local" required
+                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+              <input type="password" name="password" required
+                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition text-sm">
+            </div>
+            <button type="submit"
+              class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition text-sm flex items-center justify-center gap-2">
+              <i class="fas fa-right-to-bracket"></i>
+              Entrar
+            </button>
+          </form>
+          <p id="login-error" class="text-red-500 text-sm text-center mt-4 hidden"></p>
+          <p class="text-xs text-gray-400 text-center mt-6">Use as credenciais definidas no seed</p>
+        </div>
+      </div>
+    </div>`;
+}
+
+function DashboardView() {
+  const user = getUser();
+  return `
+    <div class="flex h-screen overflow-hidden">
+      <aside class="w-64 bg-slate-900 text-white flex flex-col shrink-0">
+        <div class="p-5 border-b border-slate-700">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 bg-indigo-500 rounded-lg flex items-center justify-center">
+              <i class="fas fa-shield-halved text-white text-sm"></i>
+            </div>
+            <div>
+              <h2 class="font-semibold text-sm">TraceGuard</h2>
+              <p class="text-xs text-slate-400">Admin</p>
+            </div>
+          </div>
+        </div>
+        <nav class="flex-1 p-3 space-y-1">
+          <a href="#dashboard" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition" data-section="dashboard">
+            <i class="fas fa-chart-pie w-5 text-center"></i> Dashboard
+          </a>
+          <a href="#tenants" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition" data-section="tenants">
+            <i class="fas fa-building w-5 text-center"></i> Tenants
+          </a>
+          <a href="#api-keys" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition" data-section="api-keys">
+            <i class="fas fa-key w-5 text-center"></i> API Keys
+          </a>
+          <a href="#audit" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition" data-section="audit">
+            <i class="fas fa-clipboard-list w-5 text-center"></i> Auditoria
+          </a>
+        </nav>
+        <div class="p-4 border-t border-slate-700">
+          <div class="flex items-center justify-between">
+            <div class="text-xs text-slate-400 truncate">${user.email || 'Admin'}</div>
+            <button onclick="logout()" class="text-xs text-slate-400 hover:text-red-400 transition">
+              <i class="fas fa-sign-out-alt"></i>
+            </button>
+          </div>
+        </div>
+      </aside>
+      <main class="flex-1 overflow-y-auto bg-gray-50">
+        <div class="p-6" id="main-content">
+          <div class="text-center py-20 text-gray-400">
+            <i class="fas fa-spinner fa-spin text-2xl"></i>
+            <p class="mt-2 text-sm">Carregando...</p>
+          </div>
+        </div>
+      </main>
+    </div>`;
+}
+
+/* -------- Sections -------- */
+
+async function DashboardSection() {
+  try {
+    const [tenantsRes, auditRes] = await Promise.all([
+      api('GET', '/api/v1/admin/tenants?page=0&size=5'),
+      api('GET', '/api/v1/admin/audit-events?page=0&size=5')
+    ]);
+    const tenants = tenantsRes.data || [];
+    const audits = auditRes.data || [];
+    const user = getUser();
+    return `
+      <div class="fade-in space-y-6">
+        <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                <i class="fas fa-building text-indigo-600"></i>
+              </div>
+              <div>
+                <p class="text-2xl font-bold">${tenants.length}</p>
+                <p class="text-xs text-gray-500">Tenants</p>
+              </div>
+            </div>
+          </div>
+          <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+                <i class="fas fa-key text-emerald-600"></i>
+              </div>
+              <div>
+                <p class="text-2xl font-bold">${audits.length}</p>
+                <p class="text-xs text-gray-500">Eventos de Auditoria</p>
+              </div>
+            </div>
+          </div>
+          <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                <i class="fas fa-user-shield text-amber-600"></i>
+              </div>
+              <div>
+                <p class="text-sm font-bold truncate">${user.role || '-'}</p>
+                <p class="text-xs text-gray-500">Seu Papel</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+            <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center">
+              <h2 class="font-semibold text-sm">Tenants Recentes</h2>
+              <a href="#tenants" class="text-xs text-indigo-600 hover:text-indigo-800">Ver todos</a>
+            </div>
+            <div class="p-5">
+              ${tenants.length ? tenants.map(t => `
+                <div class="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                  <span class="text-sm font-medium">${t.name}</span>
+                  <span class="text-xs px-2 py-0.5 rounded-full ${t.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}">${t.status}</span>
+                </div>
+              `).join('') : '<p class="text-sm text-gray-400">Nenhum tenant encontrado</p>'}
+            </div>
+          </div>
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+            <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center">
+              <h2 class="font-semibold text-sm">Auditoria Recente</h2>
+              <a href="#audit" class="text-xs text-indigo-600 hover:text-indigo-800">Ver todos</a>
+            </div>
+            <div class="p-5 max-h-64 overflow-y-auto">
+              ${audits.length ? audits.map(a => `
+                <div class="flex items-start gap-3 py-2 border-b border-gray-50 last:border-0">
+                  <div class="w-2 h-2 rounded-full bg-indigo-400 mt-2 shrink-0"></div>
+                  <div class="min-w-0">
+                    <p class="text-sm font-medium truncate">${a.action}</p>
+                    <p class="text-xs text-gray-400">${a.resourceType} - ${new Date(a.occurredAt).toLocaleString('pt-BR')}</p>
+                  </div>
+                </div>
+              `).join('') : '<p class="text-sm text-gray-400">Nenhum evento</p>'}
+            </div>
+          </div>
+        </div>
+      </div>`;
+  } catch (e) {
+    return `<div class="text-red-500 p-4">Erro ao carregar dashboard: ${e.message}</div>`;
+  }
+}
+
+async function TenantsSection() {
+  try {
+    const res = await api('GET', '/api/v1/admin/tenants?page=0&size=50');
+    const tenants = res.data || [];
+    return `
+      <div class="fade-in space-y-6">
+        <div class="flex items-center justify-between">
+          <h1 class="text-2xl font-bold text-gray-900">Tenants</h1>
+          <button onclick="showCreateTenantModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition flex items-center gap-2">
+            <i class="fas fa-plus"></i> Novo Tenant
+          </button>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="px-5 py-3">Nome</th>
+                  <th class="px-5 py-3">Slug</th>
+                  <th class="px-5 py-3">Status</th>
+                  <th class="px-5 py-3">Criado em</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                ${tenants.map(t => `
+                  <tr class="hover:bg-gray-50 transition">
+                    <td class="px-5 py-3 font-medium">${t.name}</td>
+                    <td class="px-5 py-3 text-gray-500">${t.slug}</td>
+                    <td class="px-5 py-3"><span class="px-2 py-0.5 rounded-full text-xs ${t.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}">${t.status}</span></td>
+                    <td class="px-5 py-3 text-gray-500">${new Date(t.createdAt).toLocaleString('pt-BR')}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div id="tenant-modal" class="fixed inset-0 bg-black/40 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6 modal">
+          <h3 class="text-lg font-bold mb-4">Novo Tenant</h3>
+          <form id="tenant-form" class="space-y-4">
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">Nome</label><input name="name" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"></div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">Slug</label><input name="slug" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"></div>
+            <div class="flex gap-3 justify-end pt-2">
+              <button type="button" onclick="closeCreateTenantModal()" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition">Cancelar</button>
+              <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition">Criar</button>
+            </div>
+          </form>
+        </div>
+      </div>`;
+  } catch (e) {
+    return `<div class="text-red-500 p-4">Erro ao carregar tenants: ${e.message}</div>`;
+  }
+}
+
+async function ApiKeysSection() {
+  try {
+    const res = await api('GET', '/api/v1/admin/api-keys?page=0&size=50');
+    const keys = res.data || [];
+    return `
+      <div class="fade-in space-y-6">
+        <div class="flex items-center justify-between">
+          <h1 class="text-2xl font-bold text-gray-900">API Keys</h1>
+          <button onclick="showCreateApiKeyModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition flex items-center gap-2">
+            <i class="fas fa-plus"></i> Nova API Key
+          </button>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="px-5 py-3">Label</th>
+                  <th class="px-5 py-3">Scope</th>
+                  <th class="px-5 py-3">Status</th>
+                  <th class="px-5 py-3">Criada em</th>
+                  <th class="px-5 py-3">Ações</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                ${keys.map(k => `
+                  <tr class="hover:bg-gray-50 transition">
+                    <td class="px-5 py-3 font-medium">${k.label || k.id}</td>
+                    <td class="px-5 py-3"><span class="px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700">${k.scope || 'N/A'}</span></td>
+                    <td class="px-5 py-3"><span class="px-2 py-0.5 rounded-full text-xs ${k.revoked ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}">${k.revoked ? 'Revogada' : 'Ativa'}</span></td>
+                    <td class="px-5 py-3 text-gray-500">${k.createdAt ? new Date(k.createdAt).toLocaleString('pt-BR') : '-'}</td>
+                    <td class="px-5 py-3">${!k.revoked ? `<button onclick="revokeApiKey('${k.id}')" class="text-xs text-red-600 hover:text-red-800 transition"><i class="fas fa-ban"></i> Revogar</button>` : '-'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div id="apikey-modal" class="fixed inset-0 bg-black/40 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6 modal">
+          <h3 class="text-lg font-bold mb-4">Nova API Key</h3>
+          <form id="apikey-form" class="space-y-4">
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">Tenant ID</label><input name="tenantId" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"></div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">Nome</label><input name="name" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"></div>
+            <div><label class="block text-sm font-medium text-gray-700 mb-1">Scope</label>
+              <select name="scope" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                <option value="AUDIT_WRITE">AUDIT_WRITE</option>
+                <option value="AUDIT_READ">AUDIT_READ</option>
+              </select>
+            </div>
+            <div class="flex gap-3 justify-end pt-2">
+              <button type="button" onclick="closeCreateApiKeyModal()" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition">Cancelar</button>
+              <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition">Criar</button>
+            </div>
+          </form>
+        </div>
+      </div>`;
+  } catch (e) {
+    return `<div class="text-red-500 p-4">Erro ao carregar API keys: ${e.message}</div>`;
+  }
+}
+
+async function AuditSection() {
+  try {
+    const res = await api('GET', '/api/v1/admin/audit-events?page=0&size=50');
+    const events = res.data || [];
+    return `
+      <div class="fade-in space-y-6">
+        <h1 class="text-2xl font-bold text-gray-900">Auditoria Administrativa</h1>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th class="px-5 py-3">Ação</th>
+                  <th class="px-5 py-3">Recurso</th>
+                  <th class="px-5 py-3">Admin</th>
+                  <th class="px-5 py-3">Correlation ID</th>
+                  <th class="px-5 py-3">Data</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                ${events.map(e => `
+                  <tr class="hover:bg-gray-50 transition">
+                    <td class="px-5 py-3"><span class="px-2 py-0.5 rounded-full text-xs bg-indigo-100 text-indigo-700 font-medium">${e.action}</span></td>
+                    <td class="px-5 py-3 text-gray-700">${e.resourceType}${e.resourceId ? ': ' + e.resourceId.substring(0, 12) + '...' : ''}</td>
+                    <td class="px-5 py-3 text-gray-500">${e.adminId ? e.adminId.substring(0, 8) + '...' : '-'}</td>
+                    <td class="px-5 py-3 text-gray-400 text-xs font-mono">${e.correlationId ? e.correlationId.substring(0, 16) + '...' : '-'}</td>
+                    <td class="px-5 py-3 text-gray-500">${new Date(e.occurredAt).toLocaleString('pt-BR')}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>`;
+  } catch (e) {
+    return `<div class="text-red-500 p-4">Erro ao carregar auditoria: ${e.message}</div>`;
+  }
+}
+
+/* -------- Navigation -------- */
+
+function navigate(section) {
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('bg-slate-800', 'text-white'));
+  const link = document.querySelector(`[data-section="${section}"]`);
+  if (link) link.classList.add('bg-slate-800', 'text-white');
+  const content = document.getElementById('main-content');
+  content.innerHTML = '<div class="text-center py-20 text-gray-400"><i class="fas fa-spinner fa-spin text-2xl"></i></div>';
+  const sections = { dashboard: DashboardSection, tenants: TenantsSection, 'api-keys': ApiKeysSection, audit: AuditSection };
+  const loader = sections[section] || DashboardSection;
+  loader().then(html => content.innerHTML = html);
+}
+
+window.addEventListener('hashchange', () => {
+  const section = location.hash.replace('#', '') || 'dashboard';
+  navigate(section);
+});
+
+/* -------- Modals -------- */
+
+function showCreateTenantModal() {
+  document.getElementById('tenant-modal').classList.remove('hidden');
+  document.getElementById('tenant-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    try {
+      await api('POST', '/api/v1/admin/tenants', { name: fd.get('name'), slug: fd.get('slug') });
+      closeCreateTenantModal();
+      navigate('tenants');
+    } catch (err) {
+      alert('Erro: ' + err.message);
+    }
+  };
+}
+function closeCreateTenantModal() { document.getElementById('tenant-modal').classList.add('hidden'); }
+
+function showCreateApiKeyModal() {
+  document.getElementById('apikey-modal').classList.remove('hidden');
+  document.getElementById('apikey-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    try {
+      const res = await api('POST', '/api/v1/admin/api-keys', { tenantId: fd.get('tenantId'), name: fd.get('name'), scopes: [fd.get('scope')] });
+      alert(`API Key criada!\n\nGuarde este token:\n${res.data.rawApiKey}`);
+      closeCreateApiKeyModal();
+      navigate('api-keys');
+    } catch (err) {
+      alert('Erro: ' + err.message);
+    }
+  };
+}
+function closeCreateApiKeyModal() { document.getElementById('apikey-modal').classList.add('hidden'); }
+
+async function revokeApiKey(id) {
+  if (!confirm('Tem certeza que deseja revogar esta API Key?')) return;
+  try {
+    await api('PATCH', `/api/v1/admin/api-keys/${id}/revoke`);
+    navigate('api-keys');
+  } catch (err) {
+    alert('Erro: ' + err.message);
+  }
+}
+
+/* -------- Render -------- */
+
+function render() {
+  const app = document.getElementById('app');
+  if (!isAuth()) {
+    app.innerHTML = LoginView();
+    document.getElementById('login-form').onsubmit = async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const errEl = document.getElementById('login-error');
+      try {
+        await login(fd.get('email'), fd.get('password'));
+        render();
+      } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.remove('hidden');
+      }
+    };
+  } else {
+    app.innerHTML = DashboardView();
+    navigate(location.hash.replace('#', '') || 'dashboard');
+  }
+}
+
+render();
+</script>
+
+<div class="fixed bottom-4 right-4 z-50">
+  <a href="${API}/swagger-ui.html" target="_blank" class="bg-white shadow-lg rounded-lg px-4 py-2 text-xs text-gray-600 hover:text-indigo-600 border transition flex items-center gap-2">
+    <i class="fas fa-book"></i> Swagger UI
+  </a>
+</div>
+
+</body>
+</html>

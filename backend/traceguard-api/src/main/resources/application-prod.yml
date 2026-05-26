@@ -1,0 +1,36 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  data:
+    redis:
+      url: ${REDIS_URL}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+
+logging:
+  level:
+    root: INFO
+    com.traceguard: INFO
+
+debug: false
+
+traceguard:
+  jwt:
+    secret: ${JWT_SECRET}
+    issuer: ${JWT_ISSUER:traceguard-api}
+    audience: ${JWT_AUDIENCE:traceguard-admin-api}
+  rate-limit:
+    redis:
+      enabled: ${RATE_LIMIT_REDIS_ENABLED:true}

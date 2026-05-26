@@ -9,3 +9,6 @@ CREATE TABLE tenant_api_keys (
 
 CREATE INDEX idx_tenant_api_keys_tenant_id
 ON tenant_api_keys(tenant_id);
+
+CREATE UNIQUE INDEX uq_tenant_api_keys_key_hash
+ON tenant_api_keys(key_hash);

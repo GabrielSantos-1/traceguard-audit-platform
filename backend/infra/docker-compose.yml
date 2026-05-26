@@ -3,13 +3,61 @@ services:
     image: postgres:16
     container_name: traceguard-db
     environment:
-      POSTGRES_DB: traceguard
-      POSTGRES_USER: traceguard
+      POSTGRES_DB: ${DB_NAME:-traceguard}
+      POSTGRES_USER: ${DB_USERNAME:-traceguard}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
       - traceguard_db_data:/var/lib/postgresql/data
 
+  redis:
+    image: redis:7-alpine
+    container_name: traceguard-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - traceguard_redis_data:/data
+
+  api:
+    build:
+      context: ../traceguard-api
+      dockerfile: Dockerfile
+    container_name: traceguard-api
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      DB_URL: ${DB_URL:-jdbc:postgresql://db:5432/traceguard}
+      DB_USERNAME: ${DB_USERNAME:-traceguard}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      JWT_SECRET: ${JWT_SECRET}
+      RATE_LIMIT_REDIS_ENABLED: ${RATE_LIMIT_REDIS_ENABLED:-true}
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/actuator/health/readiness | grep -q '\"status\":\"UP\"'"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
 volumes:
   traceguard_db_data:
+  traceguard_redis_data:

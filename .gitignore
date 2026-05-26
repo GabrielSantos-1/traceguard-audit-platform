@@ -1,9 +1,58 @@
-
-# build outputs
+# =========== BUILD OUTPUTS ===========
 **/target/
+build/
+dist/
+*.jar
+*.war
+*.zip
 
-# local env
+# =========== DEPENDENCIES ===========
+**/node_modules/
+**/.m2/
+**/.mvn-cache/
+backend/traceguard-api/.mvn/
+
+# =========== LOGS ===========
+*.log
+*.logs
+
+# =========== ENVIRONMENT & SECRETS ===========
 .env
+**/.env
+.env.*
+!.env.example
 application-local.yml
+application-*.local.yml
+*.pem
+*.key
+*.crt
+
+# =========== IDE / EDITOR ===========
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.iml
+
+# =========== OS ===========
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# =========== PROJECT-SPECIFIC ===========
 AGENTS.md
 backend/traceguard-api/AGENTS.md
+backend/traceguard-api/docs/
+
+# =========== FRONTEND ===========
+frontend/dist/
+frontend/build/
+frontend/.next/
+
+# =========== TEMP ===========
+*.tmp
+*.temp

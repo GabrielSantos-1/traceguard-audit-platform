@@ -1,0 +1,22 @@
+spring:
+  config:
+    activate:
+      on-profile: test
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/traceguard_test}
+    username: ${DB_USERNAME:traceguard}
+    password: ${DB_PASSWORD:traceguard_test_password}
+  data:
+    redis:
+      url: ${REDIS_URL:redis://localhost:6379}
+
+logging:
+  level:
+    root: WARN
+    com.traceguard: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
