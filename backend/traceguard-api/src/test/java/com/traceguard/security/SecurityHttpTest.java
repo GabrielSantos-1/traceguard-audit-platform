@@ -10,6 +10,8 @@ import com.traceguard.auth.dto.LoginResponse;
 import com.traceguard.adminaudit.AdminAuditController;
 import com.traceguard.adminaudit.AdminAuditService;
 import com.traceguard.adminaudit.dto.AdminAuditEventResponse;
+import com.traceguard.monitoring.activity.UserActivityService;
+import com.traceguard.monitoring.detection.BlockedIpRepository;
 import com.traceguard.common.api.ApiExceptionHandler;
 import com.traceguard.ratelimit.InMemoryRateLimiterService;
 import com.traceguard.ratelimit.RateLimitDecision;
@@ -85,6 +87,12 @@ class SecurityHttpTest {
 
     @MockBean
     private MeterRegistry meterRegistry;
+
+    @MockBean
+    private UserActivityService userActivityService;
+
+    @MockBean
+    private BlockedIpRepository blockedIpRepository;
 
     @BeforeEach
     void setUp() {

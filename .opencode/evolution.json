@@ -1,0 +1,41 @@
+{
+  "lastUpdated": "2026-05-26",
+  "sessions": [
+    {
+      "date": "2026-05-26",
+      "phase": "Fase 3 — Alertas + Resposta Automática",
+      "summary": "Sistema de notificação multicanal (Slack/Email) com bloqueio de IP em tempo real. NotificationService @Async integrado ao DetectionEngine. 141 testes, 0 falhas.",
+      "patterns": [
+        "Notification dispatch @Async para não atrasar ciclo de detecção",
+        "BlockedIpFilter antes de UserActivityFilter na cadeia para não logar requests bloqueados",
+        "Null-check defensive em NotificationChannel.send() para config nulo",
+        "Agrupamento de alertas por tenant antes de notificar"
+      ],
+      "decisions": [
+        "Notificação assíncrona via @Async em vez de event-driven para não acoplar regras ao fluxo",
+        "Config por tenant em tabela própria com JSONB (escalável para SaaS multi-tenant)",
+        "Slack via HttpClient nativo (sem RestTemplate) para leveza",
+        "Email via JavaMailSender com template HTML inline (sem Thymeleaf)",
+        "Resolução de tenant no BlockedIpFilter por IP apenas (sem depender de JWT/API Key)"
+      ]
+    },
+    {
+      "date": "2026-05-26",
+      "phase": "Fase 4 — Compliance + Frontend Premium",
+      "summary": "Dashboard premium completo com Chart.js, dark/light theme, 8 seções, export CSV, SecurityHeadersFilter (CSP, HSTS, security headers). 141 testes BUILD SUCCESS.",
+      "patterns": [
+        "CSS custom properties para theming dark/light com transição suave",
+        "Chart.js sem wrapper (instanciação direta em canvas via JS puro)",
+        "SecurityHeadersFilter como primeiro filtro da cadeia (antes de tudo)",
+        "addFilterBefore com UsernamePasswordAuthenticationFilter.class como referência para filtros customizados"
+      ],
+      "decisions": [
+        "Dashboard como SPA inline (sem React) para deploy simplificado (1 arquivo)",
+        "Chart.js CDN 4.4.7 em vez de biblioteca maior para leveza",
+        "CSP com 'unsafe-inline' e 'unsafe-eval' (trade-off necessário para Tailwind)",
+        "Export CSV em vez de PDF para simplicidade (sem dependência extra)",
+        "SecurityHeadersFilter separado (não misturado no SecurityConfig) para testabilidade"
+      ]
+    }
+  ]
+}

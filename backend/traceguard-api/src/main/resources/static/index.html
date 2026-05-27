@@ -1,40 +1,200 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TraceGuard - Painel Administrativo</title>
+<meta name="description" content="TraceGuard — Security Monitoring & Compliance Platform">
+<title>TraceGuard — Security Dashboard</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        surface: { 50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0', 800: '#1e293b', 850: '#172033', 900: '#0f172a', 950: '#0a0f1e' },
+        brand: { 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5' },
+        amber: { 400: '#fbbf24', 500: '#f59e0b' },
+        emerald: { 400: '#34d399', 500: '#10b981' },
+        rose: { 400: '#fb7185', 500: '#f43f5e' }
+      }
+    }
+  }
+}
+</script>
 <style>
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-.fade-in { animation: fadeIn 0.3s ease-out; }
-.modal { animation: fadeIn 0.2s ease-out; }
+/* ── Theme Variables ── */
+:root {
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f1f5f9;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --border: #e2e8f0;
+  --sidebar: #0f172a;
+  --sidebar-hover: #1e293b;
+  --sidebar-active: #1e293b;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-lg: 0 4px 12px rgba(0,0,0,0.08);
+  --chart-grid: #e2e8f0;
+  --severity-critical: #ef4444;
+  --severity-high: #f59e0b;
+  --severity-medium: #f97316;
+  --severity-low: #3b82f6;
+  --kpi-events: #6366f1;
+  --kpi-alerts: #f59e0b;
+  --kpi-users: #10b981;
+  --kpi-tenants: #06b6d4;
+}
+[data-theme="dark"] {
+  --bg-primary: #0a0f1e;
+  --bg-secondary: #0f172a;
+  --bg-tertiary: #172033;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --border: #1e293b;
+  --sidebar: #060a15;
+  --sidebar-hover: #0f172a;
+  --sidebar-active: #0f172a;
+  --shadow: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-lg: 0 4px 12px rgba(0,0,0,0.4);
+  --chart-grid: #1e293b;
+}
+/* ── Base ── */
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-primary); color: var(--text-primary); transition: background 0.3s, color 0.3s; }
+/* ── Transitions ── */
+.theme-transition, .theme-transition * { transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease !important; }
+.fade-enter { animation: fadeIn 0.3s ease-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideIn { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes countUp { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+.animate-slide { animation: slideIn 0.3s ease-out; }
+.animate-count { animation: countUp 0.5s ease-out; }
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+/* ── Sidebar ── */
+.sidebar { background: var(--sidebar); }
+.sidebar a { color: var(--text-muted); transition: all 0.15s; }
+.sidebar a:hover { background: var(--sidebar-hover); color: var(--text-primary); }
+.sidebar a.active { background: var(--sidebar-active); color: #fff; }
+/* ── Status badges ── */
+.badge-critical { background: rgba(239,68,68,0.12); color: #ef4444; }
+.badge-high { background: rgba(245,158,11,0.12); color: #f59e0b; }
+.badge-medium { background: rgba(249,115,22,0.12); color: #f97316; }
+.badge-low { background: rgba(59,130,246,0.12); color: #3b82f6; }
+.badge-info { background: rgba(99,102,241,0.12); color: #818cf8; }
+.badge-success { background: rgba(16,185,129,0.12); color: #10b981; }
+.badge-error { background: rgba(239,68,68,0.12); color: #ef4444; }
+.badge-warning { background: rgba(245,158,11,0.12); color: #f59e0b; }
+/* ── KPI cards ── */
+.kpi-card { background: var(--bg-secondary); border: 1px solid var(--border); box-shadow: var(--shadow); }
+.kpi-card .kpi-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+.kpi-card .kpi-value { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; }
+.kpi-card .kpi-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.kpi-card .kpi-delta { font-size: 0.7rem; font-weight: 600; padding: 1px 6px; border-radius: 4px; }
+/* ── Content panels ── */
+.panel { background: var(--bg-secondary); border: 1px solid var(--border); box-shadow: var(--shadow); }
+.panel-header { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.panel-header h3 { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); }
+.panel-body { padding: 16px 20px; }
+/* ── Table ── */
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th { text-align: left; font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; padding: 10px 14px; color: var(--text-muted); border-bottom: 1px solid var(--border); background: var(--bg-tertiary); }
+.data-table td { padding: 10px 14px; font-size: 0.82rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: var(--bg-tertiary); }
+/* ── Inputs ── */
+.input { background: var(--bg-tertiary); border: 1px solid var(--border); color: var(--text-primary); padding: 8px 12px; border-radius: 6px; font-size: 0.82rem; outline: none; transition: border-color 0.15s; }
+.input:focus { border-color: #6366f1; }
+.input::placeholder { color: var(--text-muted); }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 6px; font-size: 0.82rem; font-weight: 500; transition: all 0.15s; cursor: pointer; border: none; }
+.btn-primary { background: #6366f1; color: #fff; }
+.btn-primary:hover { background: #4f46e5; }
+.btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+.btn-ghost:hover { background: var(--bg-tertiary); }
+.btn-sm { padding: 6px 10px; font-size: 0.75rem; }
+/* ── Modal ── */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(4px); }
+.modal-box { background: var(--bg-secondary); border-radius: 12px; width: 100%; max-width: 480px; margin: 16px; box-shadow: var(--shadow-lg); animation: fadeIn 0.2s ease-out; }
+.modal-box .modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.modal-box .modal-header h3 { font-size: 1rem; font-weight: 600; }
+.modal-box .modal-body { padding: 20px; }
+.modal-box .modal-footer { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+/* ── Event feed ── */
+.event-item { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.event-item:last-child { border-bottom: none; }
+.event-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
+/* ── Charts ── */
+.chart-container { position: relative; width: 100%; height: 200px; }
+/* ── Severity bar ── */
+.severity-bar { display: flex; height: 24px; border-radius: 6px; overflow: hidden; }
+.severity-bar div { transition: width 0.6s ease; }
+/* ── Loading ── */
+.loading-shimmer { background: linear-gradient(90deg, var(--bg-tertiary) 25%, var(--border) 50%, var(--bg-tertiary) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+/* ── Responsive ── */
+@media (max-width: 768px) { .sidebar { width: 56px !important; } .sidebar span, .sidebar h2, .sidebar p { display: none; } }
 </style>
 </head>
-<body class="bg-gray-50 min-h-screen font-sans antialiased text-gray-900">
+<body>
 
-<div id="app" class="min-h-screen"></div>
+<div id="app"></div>
 
 <script>
+/* ═══════════════════════════════════════════════════════════════
+   TraceGuard — Security Dashboard
+   SPA completamente autônomo. Conecta-se à API do backend.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Constants ── */
 const API = '';
 const TOKEN_KEY = 'tg_token';
 const USER_KEY = 'tg_user';
+const THEME_KEY = 'tg_theme';
 
+/* ── State ── */
+let charts = {};
+let currentSection = 'dashboard';
+
+/* ── Helpers ── */
 function getToken() { return localStorage.getItem(TOKEN_KEY); }
-function getUser() { return JSON.parse(localStorage.getItem(USER_KEY) || '{}'); }
+function getUser() { try { return JSON.parse(localStorage.getItem(USER_KEY) || '{}'); } catch { return {}; } }
 function isAuth() { return !!getToken(); }
+function $(id) { return document.getElementById(id); }
 
+function getTheme() { return localStorage.getItem(THEME_KEY) || 'dark'; }
+function setTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  localStorage.setItem(THEME_KEY, t);
+  document.documentElement.classList.toggle('theme-transition', true);
+  setTimeout(() => document.documentElement.classList.remove('theme-transition'), 400);
+}
+
+/* ── API Client ── */
 async function api(method, path, body) {
   const headers = { 'Content-Type': 'application/json' };
   const token = getToken();
   if (token) headers['Authorization'] = `Bearer ${token}`;
   const res = await fetch(`${API}${path}`, { method, headers, body: body ? JSON.stringify(body) : undefined });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message || data.message || 'Erro desconhecido');
+  if (res.status === 204) return null;
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch { data = text; }
+  if (!res.ok) throw new Error(data?.error?.message || data?.message || `HTTP ${res.status}`);
   return data;
 }
 
+/* ── Login ── */
 async function login(email, password) {
   const res = await api('POST', '/api/v1/auth/login', { email, password });
   localStorage.setItem(TOKEN_KEY, res.data.accessToken);
@@ -45,353 +205,725 @@ async function login(email, password) {
 function logout() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
+  charts = {};
   render();
 }
 
-/* -------- Views -------- */
+/* ── Formatting ── */
+function fmtDate(iso) { if (!iso) return '-'; try { return new Date(iso).toLocaleString('pt-BR'); } catch { return iso; } }
+function fmtTime(iso) { if (!iso) return '-'; try { return new Date(iso).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }); } catch { return iso; } }
+function fmtShortId(id) { return id ? id.substring(0, 8) + '…' : '-'; }
+function severityBadge(s) {
+  const cls = (s||'INFO').toLowerCase();
+  return `<span class="px-2 py-0.5 rounded text-xs font-medium badge-${cls}">${s||'INFO'}</span>`;
+}
+function actionBadge(action) {
+  const cls = action === 'CREATE' ? 'badge-success' : action === 'UPDATE' ? 'badge-warning' : action === 'DELETE' ? 'badge-error' : action === 'ACCESS_DENIED' ? 'badge-error' : action === 'RATE_LIMITED' ? 'badge-warning' : action === 'ERROR' ? 'badge-error' : 'badge-info';
+  return `<span class="px-2 py-0.5 rounded text-xs font-medium ${cls}">${action}</span>`;
+}
+function statusBadge(status) {
+  if (status === 'ACTIVE' || status === true) return '<span class="px-2 py-0.5 rounded text-xs font-medium badge-success">Ativo</span>';
+  return '<span class="px-2 py-0.5 rounded text-xs font-medium badge-error">Inativo</span>';
+}
+function kpiDelta(val) {
+  if (val == null) return '';
+  const cls = val >= 0 ? 'badge-success' : 'badge-error';
+  const icon = val >= 0 ? 'fa-arrow-up' : 'fa-arrow-down';
+  return `<span class="kpi-delta ${cls}"><i class="fas ${icon} mr-0.5"></i>${Math.abs(val).toFixed(1)}%</span>`;
+}
 
+/* ── Charts ── */
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+
+function renderTimelineChart(canvasId, data) {
+  destroyChart(canvasId);
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  const isDark = getTheme() === 'dark';
+  charts[canvasId] = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: data.map(d => d.hour),
+      datasets: [{
+        label: 'Eventos',
+        data: data.map(d => d.count),
+        fill: true,
+        backgroundColor: 'rgba(99,102,241,0.08)',
+        borderColor: '#6366f1',
+        borderWidth: 2,
+        pointRadius: 2,
+        pointHoverRadius: 5,
+        tension: 0.3
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: isDark ? '#1e293b' : '#e2e8f0' }, ticks: { color: isDark ? '#94a3b8' : '#64748b', maxTicksLimit: 8, font: { size: 10 } } },
+        y: { grid: { color: isDark ? '#1e293b' : '#e2e8f0' }, ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 10 }, precision: 0 }, beginAtZero: true }
+      },
+      interaction: { intersect: false, mode: 'index' }
+    }
+  });
+}
+
+function renderSeverityChart(canvasId, data) {
+  destroyChart(canvasId);
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  const colors = { CRITICAL: '#ef4444', HIGH: '#f59e0b', MEDIUM: '#f97316', LOW: '#3b82f6', INFO: '#6366f1' };
+  const bgColors = { CRITICAL: 'rgba(239,68,68,0.15)', HIGH: 'rgba(245,158,11,0.15)', MEDIUM: 'rgba(249,115,22,0.15)', LOW: 'rgba(59,130,246,0.15)', INFO: 'rgba(99,102,241,0.15)' };
+  charts[canvasId] = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: data.map(d => d.severity),
+      datasets: [{
+        data: data.map(d => d.count),
+        backgroundColor: data.map(d => colors[d.severity] || '#6366f1'),
+        borderWidth: 0,
+        hoverOffset: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '70%',
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: { color: isDark() ? '#94a3b8' : '#64748b', padding: 12, font: { size: 11 }, usePointStyle: true, pointStyleWidth: 8 }
+        }
+      }
+    }
+  });
+  function isDark() { return getTheme() === 'dark'; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VIEWS
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Login View ── */
 function LoginView() {
   return `
-    <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      <div class="w-full max-w-md mx-4 fade-in">
-        <div class="bg-white rounded-2xl shadow-2xl p-8">
-          <div class="text-center mb-8">
-            <div class="w-14 h-14 bg-indigo-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-              <i class="fas fa-shield-halved text-white text-2xl"></i>
-            </div>
-            <h1 class="text-2xl font-bold text-gray-900">TraceGuard</h1>
-            <p class="text-sm text-gray-500 mt-1">Painel Administrativo</p>
+<div class="min-h-screen flex items-center justify-center" style="background: linear-gradient(135deg, #060a15 0%, #0f172a 50%, #1a1040 100%);">
+  <div class="w-full max-w-sm mx-4 fade-enter">
+    <div class="panel rounded-2xl p-8" style="background: var(--bg-secondary); border: 1px solid var(--border);">
+      <div class="text-center mb-8">
+        <div class="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center" style="background: linear-gradient(135deg, #6366f1, #4f46e5);">
+          <i class="fas fa-shield-halved text-white text-xl"></i>
+        </div>
+        <h1 class="text-xl font-bold">TraceGuard</h1>
+        <p class="text-sm" style="color: var(--text-muted);">Security Dashboard</p>
+      </div>
+      <form id="login-form" class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium mb-1" style="color: var(--text-secondary);">Email</label>
+          <input type="email" name="email" value="admin@traceguard.local" required class="input w-full">
+        </div>
+        <div>
+          <label class="block text-xs font-medium mb-1" style="color: var(--text-secondary);">Password</label>
+          <input type="password" name="password" required class="input w-full">
+        </div>
+        <button type="submit" class="btn btn-primary w-full justify-center py-2.5">
+          <i class="fas fa-right-to-bracket"></i> Sign In
+        </button>
+      </form>
+      <p id="login-error" class="text-xs text-red-400 text-center mt-4 hidden"></p>
+    </div>
+  </div>
+</div>`;
+}
+
+/* ── Main Layout ── */
+function MainLayout() {
+  const user = getUser();
+  const theme = getTheme();
+  return `
+<div class="flex h-screen overflow-hidden">
+  <aside class="sidebar w-64 shrink-0 flex flex-col" style="background: var(--sidebar);">
+    <div class="px-4 py-4 flex items-center gap-3 border-b" style="border-color: var(--border);">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style="background: linear-gradient(135deg, #6366f1, #4f46e5);">
+        <i class="fas fa-shield-halved text-white text-xs"></i>
+      </div>
+      <div class="min-w-0">
+        <h2 class="font-semibold text-sm text-white">TraceGuard</h2>
+        <p class="text-xs" style="color: var(--text-muted);">Security Ops</p>
+      </div>
+    </div>
+    <nav class="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto" id="sidebar-nav">
+      ${navItem('dashboard', 'fa-chart-pie', 'Dashboard')}
+      ${navItem('alerts', 'fa-bell', 'Alerts')}
+      ${navItem('activity', 'fa-users-gear', 'Activity')}
+      ${navItem('audit', 'fa-clipboard-list', 'Audit Trail')}
+      ${navItem('blocked-ips', 'fa-ban', 'Blocked IPs')}
+      ${navItem('tenants', 'fa-building', 'Tenants')}
+      ${navItem('api-keys', 'fa-key', 'API Keys')}
+      ${navItem('integrations', 'fa-plug', 'Integrations')}
+    </nav>
+    <div class="px-3 py-3 border-t" style="border-color: var(--border);">
+      <div class="flex items-center gap-2 mb-2">
+        <button onclick="toggleTheme()" class="btn btn-ghost btn-sm flex-1 justify-center" title="Toggle theme">
+          <i class="fas ${theme === 'dark' ? 'fa-sun' : 'fa-moon'}"></i>
+        </button>
+        <button onclick="exportReport()" class="btn btn-ghost btn-sm flex-1 justify-center" title="Export PDF Report">
+          <i class="fas fa-download"></i>
+        </button>
+      </div>
+      <div class="flex items-center justify-between px-1">
+        <div class="flex items-center gap-2 min-w-0">
+          <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold" style="background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff;">
+            ${(user.email||'A')[0].toUpperCase()}
           </div>
-          <form id="login-form" class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input type="email" name="email" value="admin@traceguard.local" required
-                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition text-sm">
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
-              <input type="password" name="password" required
-                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition text-sm">
-            </div>
-            <button type="submit"
-              class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition text-sm flex items-center justify-center gap-2">
-              <i class="fas fa-right-to-bracket"></i>
-              Entrar
-            </button>
-          </form>
-          <p id="login-error" class="text-red-500 text-sm text-center mt-4 hidden"></p>
-          <p class="text-xs text-gray-400 text-center mt-6">Use as credenciais definidas no seed</p>
+          <div class="min-w-0">
+            <p class="text-xs font-medium truncate text-white">${user.email||'Admin'}</p>
+            <p class="text-xs" style="color: var(--text-muted);">${user.role||''}</p>
+          </div>
+        </div>
+        <button onclick="logout()" class="text-xs shrink-0" style="color: var(--text-muted);" title="Logout">
+          <i class="fas fa-sign-out-alt"></i>
+        </button>
+      </div>
+    </div>
+  </aside>
+  <main class="flex-1 overflow-y-auto" style="background: var(--bg-primary);">
+    <div id="section-header" class="px-6 py-4 border-b sticky top-0 z-10" style="background: var(--bg-primary); border-color: var(--border);">
+      <div class="flex items-center justify-between">
+        <h1 class="text-lg font-bold" id="page-title">Dashboard</h1>
+        <div class="flex items-center gap-2 text-xs" style="color: var(--text-muted);">
+          <i class="fas fa-circle text-emerald-400" style="font-size: 0.5rem;"></i> System Online
         </div>
       </div>
-    </div>`;
+    </div>
+    <div id="main-content" class="p-6 fade-enter">
+      <div class="flex items-center justify-center py-20" style="color: var(--text-muted);">
+        <i class="fas fa-spinner fa-spin text-xl mr-3"></i> Loading...
+      </div>
+    </div>
+  </main>
+</div>`;
 }
 
-function DashboardView() {
-  const user = getUser();
-  return `
-    <div class="flex h-screen overflow-hidden">
-      <aside class="w-64 bg-slate-900 text-white flex flex-col shrink-0">
-        <div class="p-5 border-b border-slate-700">
-          <div class="flex items-center gap-3">
-            <div class="w-9 h-9 bg-indigo-500 rounded-lg flex items-center justify-center">
-              <i class="fas fa-shield-halved text-white text-sm"></i>
-            </div>
-            <div>
-              <h2 class="font-semibold text-sm">TraceGuard</h2>
-              <p class="text-xs text-slate-400">Admin</p>
-            </div>
-          </div>
-        </div>
-        <nav class="flex-1 p-3 space-y-1">
-          <a href="#dashboard" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition" data-section="dashboard">
-            <i class="fas fa-chart-pie w-5 text-center"></i> Dashboard
-          </a>
-          <a href="#tenants" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition" data-section="tenants">
-            <i class="fas fa-building w-5 text-center"></i> Tenants
-          </a>
-          <a href="#api-keys" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition" data-section="api-keys">
-            <i class="fas fa-key w-5 text-center"></i> API Keys
-          </a>
-          <a href="#audit" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition" data-section="audit">
-            <i class="fas fa-clipboard-list w-5 text-center"></i> Auditoria
-          </a>
-        </nav>
-        <div class="p-4 border-t border-slate-700">
-          <div class="flex items-center justify-between">
-            <div class="text-xs text-slate-400 truncate">${user.email || 'Admin'}</div>
-            <button onclick="logout()" class="text-xs text-slate-400 hover:text-red-400 transition">
-              <i class="fas fa-sign-out-alt"></i>
-            </button>
-          </div>
-        </div>
-      </aside>
-      <main class="flex-1 overflow-y-auto bg-gray-50">
-        <div class="p-6" id="main-content">
-          <div class="text-center py-20 text-gray-400">
-            <i class="fas fa-spinner fa-spin text-2xl"></i>
-            <p class="mt-2 text-sm">Carregando...</p>
-          </div>
-        </div>
-      </main>
-    </div>`;
+function navItem(section, icon, label) {
+  const active = currentSection === section ? 'active' : '';
+  return `<a href="#${section}" class="nav-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm ${active}" data-section="${section}">
+    <i class="fas ${icon} w-5 text-center" style="font-size: 0.85rem;"></i> <span>${label}</span>
+  </a>`;
 }
 
-/* -------- Sections -------- */
+/* ═══════════════════════════════════════════════════════════════
+   SECTIONS
+   ═══════════════════════════════════════════════════════════════ */
 
 async function DashboardSection() {
   try {
-    const [tenantsRes, auditRes] = await Promise.all([
-      api('GET', '/api/v1/admin/tenants?page=0&size=5'),
-      api('GET', '/api/v1/admin/audit-events?page=0&size=5')
+    const [kpiRes, severityRes, timelineRes, eventsRes, criticalRes] = await Promise.all([
+      api('GET', '/api/v1/admin/dashboard/kpi').catch(() => ({ data: {} })),
+      api('GET', '/api/v1/admin/dashboard/severity-distribution').catch(() => ({ data: [] })),
+      api('GET', '/api/v1/admin/dashboard/timeline').catch(() => ({ data: [] })),
+      api('GET', '/api/v1/admin/dashboard/recent-events').catch(() => ({ data: [] })),
+      api('GET', '/api/v1/admin/dashboard/critical-alerts').catch(() => ({ data: [] }))
     ]);
-    const tenants = tenantsRes.data || [];
-    const audits = auditRes.data || [];
-    const user = getUser();
-    return `
-      <div class="fade-in space-y-6">
-        <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-                <i class="fas fa-building text-indigo-600"></i>
-              </div>
-              <div>
-                <p class="text-2xl font-bold">${tenants.length}</p>
-                <p class="text-xs text-gray-500">Tenants</p>
-              </div>
-            </div>
-          </div>
-          <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
-                <i class="fas fa-key text-emerald-600"></i>
-              </div>
-              <div>
-                <p class="text-2xl font-bold">${audits.length}</p>
-                <p class="text-xs text-gray-500">Eventos de Auditoria</p>
-              </div>
-            </div>
-          </div>
-          <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-                <i class="fas fa-user-shield text-amber-600"></i>
-              </div>
-              <div>
-                <p class="text-sm font-bold truncate">${user.role || '-'}</p>
-                <p class="text-xs text-gray-500">Seu Papel</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div class="bg-white rounded-xl shadow-sm border border-gray-100">
-            <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center">
-              <h2 class="font-semibold text-sm">Tenants Recentes</h2>
-              <a href="#tenants" class="text-xs text-indigo-600 hover:text-indigo-800">Ver todos</a>
-            </div>
-            <div class="p-5">
-              ${tenants.length ? tenants.map(t => `
-                <div class="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                  <span class="text-sm font-medium">${t.name}</span>
-                  <span class="text-xs px-2 py-0.5 rounded-full ${t.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}">${t.status}</span>
-                </div>
-              `).join('') : '<p class="text-sm text-gray-400">Nenhum tenant encontrado</p>'}
-            </div>
-          </div>
-          <div class="bg-white rounded-xl shadow-sm border border-gray-100">
-            <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center">
-              <h2 class="font-semibold text-sm">Auditoria Recente</h2>
-              <a href="#audit" class="text-xs text-indigo-600 hover:text-indigo-800">Ver todos</a>
-            </div>
-            <div class="p-5 max-h-64 overflow-y-auto">
-              ${audits.length ? audits.map(a => `
-                <div class="flex items-start gap-3 py-2 border-b border-gray-50 last:border-0">
-                  <div class="w-2 h-2 rounded-full bg-indigo-400 mt-2 shrink-0"></div>
-                  <div class="min-w-0">
-                    <p class="text-sm font-medium truncate">${a.action}</p>
-                    <p class="text-xs text-gray-400">${a.resourceType} - ${new Date(a.occurredAt).toLocaleString('pt-BR')}</p>
-                  </div>
-                </div>
-              `).join('') : '<p class="text-sm text-gray-400">Nenhum evento</p>'}
-            </div>
-          </div>
-        </div>
-      </div>`;
-  } catch (e) {
-    return `<div class="text-red-500 p-4">Erro ao carregar dashboard: ${e.message}</div>`;
-  }
-}
+    const kpi = kpiRes.data || {};
+    const severity = severityRes.data || [];
+    const timeline = timelineRes.data || [];
+    const events = eventsRes.data || [];
+    const critical = criticalRes.data || [];
+    const totalAlerts = severity.reduce((s, i) => s + i.count, 0);
 
-async function TenantsSection() {
-  try {
-    const res = await api('GET', '/api/v1/admin/tenants?page=0&size=50');
-    const tenants = res.data || [];
+    setTimeout(() => {
+      if (timeline.length) renderTimelineChart('chart-timeline', timeline);
+      if (severity.length) renderSeverityChart('chart-severity', severity);
+    }, 50);
+
     return `
-      <div class="fade-in space-y-6">
-        <div class="flex items-center justify-between">
-          <h1 class="text-2xl font-bold text-gray-900">Tenants</h1>
-          <button onclick="showCreateTenantModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition flex items-center gap-2">
-            <i class="fas fa-plus"></i> Novo Tenant
-          </button>
-        </div>
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead>
-                <tr class="bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  <th class="px-5 py-3">Nome</th>
-                  <th class="px-5 py-3">Slug</th>
-                  <th class="px-5 py-3">Status</th>
-                  <th class="px-5 py-3">Criado em</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-100">
-                ${tenants.map(t => `
-                  <tr class="hover:bg-gray-50 transition">
-                    <td class="px-5 py-3 font-medium">${t.name}</td>
-                    <td class="px-5 py-3 text-gray-500">${t.slug}</td>
-                    <td class="px-5 py-3"><span class="px-2 py-0.5 rounded-full text-xs ${t.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}">${t.status}</span></td>
-                    <td class="px-5 py-3 text-gray-500">${new Date(t.createdAt).toLocaleString('pt-BR')}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
+<div class="space-y-6 fade-enter" data-section-init="dashboard">
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    ${kpiCard('fa-chart-bar', 'kpi-events', kpi.totalEvents24h ?? '—', 'Events (24h)', kpi.eventsChangePercent)}
+    ${kpiCard('fa-bell', 'kpi-alerts', kpi.activeAlerts ?? '—', 'Active Alerts', kpi.alertsChangePercent)}
+    ${kpiCard('fa-user', 'kpi-users', kpi.activeUsers ?? '—', 'Active Users', null)}
+    ${kpiCard('fa-building', 'kpi-tenants', kpi.totalTenants ?? '—', 'Tenants', null)}
+  </div>
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+    <div class="panel lg:col-span-3 rounded-xl overflow-hidden">
+      <div class="panel-header"><h3>Activity Timeline (24h)</h3></div>
+      <div class="panel-body"><div class="chart-container"><canvas id="chart-timeline"></canvas></div></div>
+    </div>
+    <div class="panel lg:col-span-2 rounded-xl overflow-hidden">
+      <div class="panel-header"><h3>Severity Distribution</h3></div>
+      <div class="panel-body"><div class="chart-container" style="height: 200px;"><canvas id="chart-severity"></canvas></div></div>
+    </div>
+  </div>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div class="panel rounded-xl overflow-hidden">
+      <div class="panel-header"><h3>Recent Events</h3><a href="#alerts" class="text-xs" style="color: #6366f1;">View all</a></div>
+      <div class="panel-body max-h-72 overflow-y-auto p-0">
+        ${events.length ? events.slice(0, 7).map(e => `
+          <div class="event-item px-5">
+            <div class="event-dot" style="background: ${e.severity === 'CRITICAL' ? '#ef4444' : e.severity === 'HIGH' ? '#f59e0b' : e.severity === 'MEDIUM' ? '#f97316' : '#3b82f6'};"></div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-medium truncate">${e.action||'Event'}</span>
+                ${severityBadge(e.severity)}
+              </div>
+              <p class="text-xs" style="color: var(--text-muted);">${e.description||''}${e.ip ? ' · ' + e.ip : ''} · ${fmtTime(e.occurredAt)}</p>
+            </div>
           </div>
-        </div>
+        `).join('') : '<p class="text-sm px-5 py-4" style="color: var(--text-muted);">No recent events</p>'}
       </div>
-      <div id="tenant-modal" class="fixed inset-0 bg-black/40 flex items-center justify-center hidden z-50">
-        <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6 modal">
-          <h3 class="text-lg font-bold mb-4">Novo Tenant</h3>
-          <form id="tenant-form" class="space-y-4">
-            <div><label class="block text-sm font-medium text-gray-700 mb-1">Nome</label><input name="name" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"></div>
-            <div><label class="block text-sm font-medium text-gray-700 mb-1">Slug</label><input name="slug" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"></div>
-            <div class="flex gap-3 justify-end pt-2">
-              <button type="button" onclick="closeCreateTenantModal()" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition">Cancelar</button>
-              <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition">Criar</button>
+    </div>
+    <div class="panel rounded-xl overflow-hidden">
+      <div class="panel-header"><h3>Critical Alerts</h3><span class="badge-critical px-2 py-0.5 rounded text-xs font-medium">${critical.length}</span></div>
+      <div class="panel-body max-h-72 overflow-y-auto p-0">
+        ${critical.length ? critical.slice(0, 5).map(a => `
+          <div class="event-item px-5">
+            <div class="event-dot" style="background: ${a.severity === 'CRITICAL' ? '#ef4444' : '#f59e0b'};"></div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-medium truncate">${a.title||'Alert'}</span>
+                ${severityBadge(a.severity)}
+              </div>
+              <p class="text-xs" style="color: var(--text-muted);">${a.description||''}${a.ip ? ' · ' + a.ip : ''} · ${fmtTime(a.occurredAt)}</p>
             </div>
-          </form>
-        </div>
-      </div>`;
-  } catch (e) {
-    return `<div class="text-red-500 p-4">Erro ao carregar tenants: ${e.message}</div>`;
-  }
-}
-
-async function ApiKeysSection() {
-  try {
-    const res = await api('GET', '/api/v1/admin/api-keys?page=0&size=50');
-    const keys = res.data || [];
-    return `
-      <div class="fade-in space-y-6">
-        <div class="flex items-center justify-between">
-          <h1 class="text-2xl font-bold text-gray-900">API Keys</h1>
-          <button onclick="showCreateApiKeyModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition flex items-center gap-2">
-            <i class="fas fa-plus"></i> Nova API Key
-          </button>
-        </div>
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead>
-                <tr class="bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  <th class="px-5 py-3">Label</th>
-                  <th class="px-5 py-3">Scope</th>
-                  <th class="px-5 py-3">Status</th>
-                  <th class="px-5 py-3">Criada em</th>
-                  <th class="px-5 py-3">Ações</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-100">
-                ${keys.map(k => `
-                  <tr class="hover:bg-gray-50 transition">
-                    <td class="px-5 py-3 font-medium">${k.label || k.id}</td>
-                    <td class="px-5 py-3"><span class="px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700">${k.scope || 'N/A'}</span></td>
-                    <td class="px-5 py-3"><span class="px-2 py-0.5 rounded-full text-xs ${k.revoked ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}">${k.revoked ? 'Revogada' : 'Ativa'}</span></td>
-                    <td class="px-5 py-3 text-gray-500">${k.createdAt ? new Date(k.createdAt).toLocaleString('pt-BR') : '-'}</td>
-                    <td class="px-5 py-3">${!k.revoked ? `<button onclick="revokeApiKey('${k.id}')" class="text-xs text-red-600 hover:text-red-800 transition"><i class="fas fa-ban"></i> Revogar</button>` : '-'}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
           </div>
-        </div>
+        `).join('') : '<p class="text-sm px-5 py-4" style="color: var(--text-muted);">No critical alerts</p>'}
       </div>
-      <div id="apikey-modal" class="fixed inset-0 bg-black/40 flex items-center justify-center hidden z-50">
-        <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6 modal">
-          <h3 class="text-lg font-bold mb-4">Nova API Key</h3>
-          <form id="apikey-form" class="space-y-4">
-            <div><label class="block text-sm font-medium text-gray-700 mb-1">Tenant ID</label><input name="tenantId" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"></div>
-            <div><label class="block text-sm font-medium text-gray-700 mb-1">Nome</label><input name="name" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"></div>
-            <div><label class="block text-sm font-medium text-gray-700 mb-1">Scope</label>
-              <select name="scope" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-                <option value="AUDIT_WRITE">AUDIT_WRITE</option>
-                <option value="AUDIT_READ">AUDIT_READ</option>
-              </select>
-            </div>
-            <div class="flex gap-3 justify-end pt-2">
-              <button type="button" onclick="closeCreateApiKeyModal()" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition">Cancelar</button>
-              <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition">Criar</button>
-            </div>
-          </form>
-        </div>
-      </div>`;
+    </div>
+  </div>
+</div>`;
   } catch (e) {
-    return `<div class="text-red-500 p-4">Erro ao carregar API keys: ${e.message}</div>`;
+    return `<div class="p-6 text-red-400"><i class="fas fa-exclamation-triangle mr-2"></i> ${e.message}</div>`;
   }
 }
 
+function kpiCard(icon, color, value, label, delta) {
+  const colors = { 'kpi-events': '#6366f1', 'kpi-alerts': '#f59e0b', 'kpi-users': '#10b981', 'kpi-tenants': '#06b6d4' };
+  const bgColors = { 'kpi-events': 'rgba(99,102,241,0.1)', 'kpi-alerts': 'rgba(245,158,11,0.1)', 'kpi-users': 'rgba(16,185,129,0.1)', 'kpi-tenants': 'rgba(6,182,212,0.1)' };
+  const c = colors[color] || '#6366f1';
+  const bg = bgColors[color] || 'rgba(99,102,241,0.1)';
+  return `
+<div class="kpi-card rounded-xl p-4">
+  <div class="flex items-center gap-3">
+    <div class="kpi-icon" style="background: ${bg}; color: ${c};"><i class="fas ${icon}"></i></div>
+    <div>
+      <div class="kpi-value animate-count">${value}</div>
+      <div class="kpi-label">${label}</div>
+      ${delta != null ? `<div class="mt-1">${kpiDelta(delta)}</div>` : ''}
+    </div>
+  </div>
+</div>`;
+}
+
+/* ── Alerts Section ── */
+async function AlertsSection() {
+  try {
+    const [alertsRes, countRes] = await Promise.all([
+      api('GET', '/api/v1/admin/detection/alerts?page=0&size=50&sort=-createdAt').catch(() => ({ data: [] })),
+      api('GET', '/api/v1/admin/detection/alerts/count').catch(() => 0)
+    ]);
+    const alerts = alertsRes.data || [];
+    const count = typeof countRes === 'number' ? countRes : (typeof countRes === 'object' ? (countRes.data || 0) : 0);
+    return `
+<div class="space-y-4 fade-enter">
+  <div class="flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <h2 class="text-sm font-semibold" style="color: var(--text-secondary);">Detection Alerts</h2>
+      <span class="badge-critical px-2 py-0.5 rounded text-xs font-medium">${count} unacknowledged</span>
+    </div>
+    <div class="flex gap-2">
+      <select id="alert-severity-filter" onchange="renderAlerts()" class="input text-xs py-1.5">
+        <option value="">All Severities</option>
+        <option value="CRITICAL">CRITICAL</option>
+        <option value="HIGH">HIGH</option>
+        <option value="MEDIUM">MEDIUM</option>
+        <option value="LOW">LOW</option>
+      </select>
+    </div>
+  </div>
+  <div class="panel rounded-xl overflow-hidden">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Severity</th>
+          <th>Rule</th>
+          <th>Title</th>
+          <th>IP</th>
+          <th>User</th>
+          <th>Status</th>
+          <th>Time</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="alerts-tbody">
+        ${alerts.map(a => alertRow(a)).join('')}
+        ${alerts.length === 0 ? '<tr><td colspan="8" class="text-center py-8" style="color: var(--text-muted);">No alerts found</td></tr>' : ''}
+      </tbody>
+    </table>
+  </div>
+</div>`;
+  } catch (e) {
+    return `<div class="p-6 text-red-400"><i class="fas fa-exclamation-triangle mr-2"></i> ${e.message}</div>`;
+  }
+}
+
+function alertRow(a) {
+  return `<tr>
+    <td>${severityBadge(a.severity)}</td>
+    <td><span class="text-xs font-mono" style="color: var(--text-secondary);">${a.ruleName||'-'}</span></td>
+    <td><span class="text-sm">${a.title||'-'}</span></td>
+    <td><span class="text-xs font-mono" style="color: var(--text-secondary);">${a.sourceIp||'-'}</span></td>
+    <td><span class="text-xs">${a.userId ? fmtShortId(a.userId) : '-'}</span></td>
+    <td>${a.acknowledged ? '<span class="badge-success px-2 py-0.5 rounded text-xs font-medium">Acknowledged</span>' : '<span class="badge-warning px-2 py-0.5 rounded text-xs font-medium">Open</span>'}</td>
+    <td><span class="text-xs" style="color: var(--text-muted);">${fmtDate(a.createdAt)}</span></td>
+    <td>${!a.acknowledged ? `<button onclick="acknowledgeAlert('${a.id}')" class="btn btn-ghost btn-sm text-xs"><i class="fas fa-check"></i></button>` : ''}</td>
+  </tr>`;
+}
+
+async function acknowledgeAlert(id) {
+  try {
+    await api('PATCH', `/api/v1/admin/detection/alerts/${id}/acknowledge`);
+    navigate('alerts');
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+/* ── Activity Section ── */
+async function ActivitySection() {
+  try {
+    const params = new URLSearchParams(location.hash.split('?')[1] || '');
+    const userIdFilter = params.get('userId') || '';
+    const res = await api('GET', '/api/v1/admin/activity?page=0&size=50' + (userIdFilter ? '&userId=' + userIdFilter : ''));
+    const activities = res.data || [];
+    return `
+<div class="space-y-4 fade-enter">
+  <div class="flex items-center justify-between">
+    <h2 class="text-sm font-semibold" style="color: var(--text-secondary);">User Activity Log</h2>
+    ${userIdFilter ? `<span class="text-xs" style="color: var(--text-muted);">Filtered: <code class="px-1.5 py-0.5 rounded" style="background: var(--bg-tertiary);">${userIdFilter}</code> <a href="#activity" class="ml-1" style="color: #6366f1;">Clear</a></span>` : ''}
+  </div>
+  <div class="panel rounded-xl overflow-hidden">
+    <table class="data-table">
+      <thead><tr>
+        <th>Action</th><th>User</th><th>Role</th><th>Resource</th><th>Status</th><th>IP</th><th>Duration</th><th>Time</th>
+      </tr></thead>
+      <tbody>
+        ${activities.length ? activities.map(a => {
+          const isErr = !a.success || a.httpStatus >= 400;
+          return `<tr style="${isErr ? 'background: rgba(239,68,68,0.03);' : ''}">
+            <td>${actionBadge(a.action)}</td>
+            <td><a href="#activity?userId=${a.userId}" class="text-xs font-mono" style="color: #6366f1;">${a.userId ? fmtShortId(a.userId) : '-'}</a></td>
+            <td><span class="text-xs" style="color: var(--text-secondary);">${a.userRole||'-'}</span></td>
+            <td><div class="text-xs truncate max-w-[160px]" title="${a.httpMethod} ${a.httpPath}">${a.httpMethod||''} ${(a.httpPath||'').substring(0, 35)}${(a.httpPath||'').length > 35 ? '…' : ''}</div></td>
+            <td><span class="px-2 py-0.5 rounded text-xs font-medium ${a.success ? 'badge-success' : 'badge-error'}">${a.httpStatus||'-'}</span></td>
+            <td><span class="text-xs font-mono" style="color: var(--text-secondary);">${a.ip||'-'}</span></td>
+            <td><span class="text-xs" style="color: var(--text-muted);">${a.durationMs != null ? a.durationMs + 'ms' : '-'}</span></td>
+            <td><span class="text-xs whitespace-nowrap" style="color: var(--text-muted);">${fmtDate(a.occurredAt)}</span></td>
+          </tr>`;
+        }).join('') : '<tr><td colspan="8" class="text-center py-8" style="color: var(--text-muted);">No activity recorded</td></tr>'}
+      </tbody>
+    </table>
+  </div>
+</div>`;
+  } catch(e) { return `<div class="p-6 text-red-400">${e.message}</div>`; }
+}
+
+/* ── Audit Section ── */
 async function AuditSection() {
   try {
     const res = await api('GET', '/api/v1/admin/audit-events?page=0&size=50');
     const events = res.data || [];
     return `
-      <div class="fade-in space-y-6">
-        <h1 class="text-2xl font-bold text-gray-900">Auditoria Administrativa</h1>
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead>
-                <tr class="bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  <th class="px-5 py-3">Ação</th>
-                  <th class="px-5 py-3">Recurso</th>
-                  <th class="px-5 py-3">Admin</th>
-                  <th class="px-5 py-3">Correlation ID</th>
-                  <th class="px-5 py-3">Data</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-100">
-                ${events.map(e => `
-                  <tr class="hover:bg-gray-50 transition">
-                    <td class="px-5 py-3"><span class="px-2 py-0.5 rounded-full text-xs bg-indigo-100 text-indigo-700 font-medium">${e.action}</span></td>
-                    <td class="px-5 py-3 text-gray-700">${e.resourceType}${e.resourceId ? ': ' + e.resourceId.substring(0, 12) + '...' : ''}</td>
-                    <td class="px-5 py-3 text-gray-500">${e.adminId ? e.adminId.substring(0, 8) + '...' : '-'}</td>
-                    <td class="px-5 py-3 text-gray-400 text-xs font-mono">${e.correlationId ? e.correlationId.substring(0, 16) + '...' : '-'}</td>
-                    <td class="px-5 py-3 text-gray-500">${new Date(e.occurredAt).toLocaleString('pt-BR')}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>`;
-  } catch (e) {
-    return `<div class="text-red-500 p-4">Erro ao carregar auditoria: ${e.message}</div>`;
+<div class="space-y-4 fade-enter">
+  <h2 class="text-sm font-semibold" style="color: var(--text-secondary);">Admin Audit Trail</h2>
+  <div class="panel rounded-xl overflow-hidden">
+    <table class="data-table">
+      <thead><tr><th>Action</th><th>Resource</th><th>Admin</th><th>Correlation ID</th><th>Time</th></tr></thead>
+      <tbody>
+        ${events.length ? events.map(e => `<tr>
+          <td><span class="px-2 py-0.5 rounded text-xs font-medium badge-info">${e.action}</span></td>
+          <td><span class="text-xs">${e.resourceType}${e.resourceId ? ': ' + fmtShortId(e.resourceId) : ''}</span></td>
+          <td><span class="text-xs font-mono" style="color: var(--text-secondary);">${e.adminId ? fmtShortId(e.adminId) : '-'}</span></td>
+          <td><span class="text-xs font-mono" style="color: var(--text-muted);">${e.correlationId ? e.correlationId.substring(0, 12) + '…' : '-'}</span></td>
+          <td><span class="text-xs whitespace-nowrap" style="color: var(--text-muted);">${fmtDate(e.occurredAt)}</span></td>
+        </tr>`).join('') : '<tr><td colspan="5" class="text-center py-8" style="color: var(--text-muted);">No audit events</td></tr>'}
+      </tbody>
+    </table>
+  </div>
+</div>`;
+  } catch(e) { return `<div class="p-6 text-red-400">${e.message}</div>`; }
+}
+
+/* ── Blocked IPs Section ── */
+async function BlockedIpsSection() {
+  try {
+    const res = await api('GET', '/api/v1/admin/detection/blocked-ips');
+    const ips = res.data || [];
+    const activeIps = ips.filter(i => i.active);
+    return `
+<div class="space-y-4 fade-enter">
+  <div class="flex items-center justify-between">
+    <h2 class="text-sm font-semibold" style="color: var(--text-secondary);">Blocked IPs</h2>
+    <span class="badge-error px-2 py-0.5 rounded text-xs font-medium">${activeIps.length} active</span>
+  </div>
+  <div class="panel rounded-xl overflow-hidden">
+    <table class="data-table">
+      <thead><tr><th>IP</th><th>Tenant</th><th>Rule</th><th>Reason</th><th>Blocked</th><th>Expires</th><th>Status</th></tr></thead>
+      <tbody>
+        ${ips.length ? ips.map(ip => `<tr>
+          <td><span class="text-xs font-mono font-medium">${ip.ip}</span></td>
+          <td><span class="text-xs">${fmtShortId(ip.tenantId)}</span></td>
+          <td><span class="text-xs">${ip.ruleName||'-'}</span></td>
+          <td><span class="text-xs" style="color: var(--text-secondary);">${ip.reason||'-'}</span></td>
+          <td><span class="text-xs" style="color: var(--text-muted);">${fmtDate(ip.blockedAt)}</span></td>
+          <td><span class="text-xs" style="color: var(--text-muted);">${ip.expiresAt ? fmtDate(ip.expiresAt) : '—'}</span></td>
+          <td>${ip.active ? '<span class="badge-error px-2 py-0.5 rounded text-xs font-medium">Blocked</span>' : '<span class="badge-success px-2 py-0.5 rounded text-xs font-medium">Expired</span>'}</td>
+        </tr>`).join('') : '<tr><td colspan="7" class="text-center py-8" style="color: var(--text-muted);">No blocked IPs</td></tr>'}
+      </tbody>
+    </table>
+  </div>
+</div>`;
+  } catch(e) { return `<div class="p-6 text-red-400">${e.message}</div>`; }
+}
+
+/* ── Tenants Section ── */
+async function TenantsSection() {
+  try {
+    const res = await api('GET', '/api/v1/admin/tenants?page=0&size=50');
+    const tenants = res.data || [];
+    return `
+<div class="space-y-4 fade-enter">
+  <div class="flex items-center justify-between">
+    <h2 class="text-sm font-semibold" style="color: var(--text-secondary);">Tenants</h2>
+    <button onclick="showTenantModal()" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> New Tenant</button>
+  </div>
+  <div class="panel rounded-xl overflow-hidden">
+    <table class="data-table">
+      <thead><tr><th>Name</th><th>Slug</th><th>Status</th><th>Created</th></tr></thead>
+      <tbody>
+        ${tenants.length ? tenants.map(t => `<tr>
+          <td><span class="text-sm font-medium">${t.name}</span></td>
+          <td><span class="text-xs" style="color: var(--text-secondary);">${t.slug}</span></td>
+          <td>${statusBadge(t.status)}</td>
+          <td><span class="text-xs" style="color: var(--text-muted);">${fmtDate(t.createdAt)}</span></td>
+        </tr>`).join('') : '<tr><td colspan="4" class="text-center py-8" style="color: var(--text-muted);">No tenants found</td></tr>'}
+      </tbody>
+    </table>
+  </div>
+</div>
+<div id="tenant-modal" class="modal-overlay hidden" onclick="if(event.target===this)closeTenantModal()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-header"><h3>New Tenant</h3><button onclick="closeTenantModal()" class="btn btn-ghost btn-sm"><i class="fas fa-times"></i></button></div>
+    <form id="tenant-form" class="modal-body space-y-4">
+      <div><label class="block text-xs font-medium mb-1" style="color: var(--text-secondary);">Name</label><input name="name" required class="input w-full"></div>
+      <div><label class="block text-xs font-medium mb-1" style="color: var(--text-secondary);">Slug</label><input name="slug" required class="input w-full" placeholder="my-tenant"></div>
+    </form>
+    <div class="modal-footer">
+      <button type="button" onclick="closeTenantModal()" class="btn btn-ghost">Cancel</button>
+      <button type="submit" form="tenant-form" class="btn btn-primary">Create</button>
+    </div>
+  </div>
+</div>`;
+  } catch(e) { return `<div class="p-6 text-red-400">${e.message}</div>`; }
+}
+
+async function createTenant(data) {
+  await api('POST', '/api/v1/admin/tenants', data);
+  closeTenantModal();
+  navigate('tenants');
+}
+
+function showTenantModal() {
+  const m = document.getElementById('tenant-modal');
+  if (!m) return;
+  m.classList.remove('hidden');
+  document.getElementById('tenant-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    try { await createTenant({ name: fd.get('name'), slug: fd.get('slug') }); }
+    catch(err) { alert('Error: ' + err.message); }
+  };
+}
+function closeTenantModal() { const m = document.getElementById('tenant-modal'); if(m) m.classList.add('hidden'); }
+
+/* ── API Keys Section ── */
+async function ApiKeysSection() {
+  try {
+    const res = await api('GET', '/api/v1/admin/api-keys?page=0&size=50');
+    const keys = res.data || [];
+    return `
+<div class="space-y-4 fade-enter">
+  <div class="flex items-center justify-between">
+    <h2 class="text-sm font-semibold" style="color: var(--text-secondary);">API Keys</h2>
+    <button onclick="showApiKeyModal()" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> New Key</button>
+  </div>
+  <div class="panel rounded-xl overflow-hidden">
+    <table class="data-table">
+      <thead><tr><th>Label</th><th>Scope</th><th>Status</th><th>Last Used</th><th>Created</th><th></th></tr></thead>
+      <tbody>
+        ${keys.length ? keys.map(k => `<tr>
+          <td><span class="text-sm font-medium">${k.label||k.name||k.id||'-'}</span></td>
+          <td><span class="badge-info px-2 py-0.5 rounded text-xs font-medium">${(k.scopes||[k.scope]||['N/A']).join(', ')}</span></td>
+          <td>${k.revoked ? '<span class="badge-error px-2 py-0.5 rounded text-xs font-medium">Revoked</span>' : statusBadge(true)}</td>
+          <td><span class="text-xs" style="color: var(--text-muted);">${k.lastUsedAt ? fmtDate(k.lastUsedAt) : 'Never'}</span></td>
+          <td><span class="text-xs" style="color: var(--text-muted);">${k.createdAt ? fmtDate(k.createdAt) : '-'}</span></td>
+          <td>${!k.revoked ? `<button onclick="revokeApiKey('${k.id}')" class="btn btn-ghost btn-sm text-xs"><i class="fas fa-ban"></i></button>` : ''}</td>
+        </tr>`).join('') : '<tr><td colspan="6" class="text-center py-8" style="color: var(--text-muted);">No API keys</td></tr>'}
+      </tbody>
+    </table>
+  </div>
+</div>
+<div id="apikey-modal" class="modal-overlay hidden" onclick="if(event.target===this)closeApiKeyModal()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-header"><h3>New API Key</h3><button onclick="closeApiKeyModal()" class="btn btn-ghost btn-sm"><i class="fas fa-times"></i></button></div>
+    <form id="apikey-form" class="modal-body space-y-4">
+      <div><label class="block text-xs font-medium mb-1" style="color: var(--text-secondary);">Tenant ID</label><input name="tenantId" required class="input w-full" placeholder="uuid"></div>
+      <div><label class="block text-xs font-medium mb-1" style="color: var(--text-secondary);">Name</label><input name="name" required class="input w-full"></div>
+      <div><label class="block text-xs font-medium mb-1" style="color: var(--text-secondary);">Scope</label>
+        <select name="scope" class="input w-full">
+          <option value="AUDIT_WRITE">AUDIT_WRITE</option>
+          <option value="AUDIT_READ">AUDIT_READ</option>
+        </select>
+      </div>
+    </form>
+    <div class="modal-footer">
+      <button type="button" onclick="closeApiKeyModal()" class="btn btn-ghost">Cancel</button>
+      <button type="submit" form="apikey-form" class="btn btn-primary">Create</button>
+    </div>
+  </div>
+</div>`;
+  } catch(e) { return `<div class="p-6 text-red-400">${e.message}</div>`; }
+}
+
+async function createApiKey(data) {
+  const res = await api('POST', '/api/v1/admin/api-keys', data);
+  const rawKey = res?.data?.rawApiKey || res?.data?.apiKey;
+  if (rawKey) alert(`API Key created!\n\nSave this key — it won't be shown again:\n${rawKey}`);
+  closeApiKeyModal();
+  navigate('api-keys');
+}
+
+async function revokeApiKey(id) {
+  if (!confirm('Revoke this API key?')) return;
+  try { await api('PATCH', `/api/v1/admin/api-keys/${id}/revoke`); navigate('api-keys'); }
+  catch(e) { alert('Error: ' + e.message); }
+}
+
+function showApiKeyModal() {
+  const m = document.getElementById('apikey-modal');
+  if (!m) return;
+  m.classList.remove('hidden');
+  document.getElementById('apikey-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    try { await createApiKey({ tenantId: fd.get('tenantId'), name: fd.get('name'), scopes: [fd.get('scope')] }); }
+    catch(err) { alert('Error: ' + err.message); }
+  };
+}
+function closeApiKeyModal() { const m = document.getElementById('apikey-modal'); if(m) m.classList.add('hidden'); }
+
+/* ── Integrations Section ── */
+async function IntegrationsSection() {
+  try {
+    const res = await api('GET', '/api/v1/admin/integrations');
+    const integrations = res.data || [];
+    return `
+<div class="space-y-4 fade-enter">
+  <h2 class="text-sm font-semibold" style="color: var(--text-secondary);">Integrations & Notifications</h2>
+  <div class="panel rounded-xl overflow-hidden">
+    <table class="data-table">
+      <thead><tr><th>Provider</th><th>Name</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+        ${integrations.length ? integrations.map(i => `<tr>
+          <td><span class="px-2 py-0.5 rounded text-xs font-medium badge-info">${i.provider||'-'}</span></td>
+          <td><span class="text-sm">${i.name||'-'}</span></td>
+          <td>${i.enabled ? '<span class="badge-success px-2 py-0.5 rounded text-xs font-medium">Enabled</span>' : '<span class="text-xs" style="color: var(--text-muted);">Disabled</span>'}</td>
+          <td><button class="btn btn-ghost btn-sm text-xs" onclick="alert('Edit integration: ${i.provider}')"><i class="fas fa-pen"></i></button></td>
+        </tr>`).join('') : '<tr><td colspan="4" class="text-center py-8" style="color: var(--text-muted);">No integrations configured</td></tr>'}
+      </tbody>
+    </table>
+  </div>
+</div>`;
+  } catch(e) { return `<div class="p-6 text-red-400">${e.message}</div>`; }
+}
+
+/* ── Export Report (PDF) ── */
+async function exportReport() {
+  try {
+    const [kpiRes, severityRes, timelineRes] = await Promise.all([
+      api('GET', '/api/v1/admin/dashboard/kpi').catch(() => ({ data: {} })),
+      api('GET', '/api/v1/admin/dashboard/severity-distribution').catch(() => ({ data: [] })),
+      api('GET', '/api/v1/admin/dashboard/timeline').catch(() => ({ data: [] }))
+    ]);
+    const kpi = kpiRes.data || {};
+    const severity = severityRes.data || [];
+    const timeline = timelineRes.data || [];
+
+    // Build CSV report
+    let csv = 'TraceGuard Security Report\nGenerated: ' + new Date().toISOString() + '\n\n';
+    csv += '=== KPIs ===\n';
+    csv += 'Events (24h),Active Alerts,Active Users,Tenants\n';
+    csv += `${kpi.totalEvents24h ?? 'N/A'},${kpi.activeAlerts ?? 'N/A'},${kpi.activeUsers ?? 'N/A'},${kpi.totalTenants ?? 'N/A'}\n\n`;
+    csv += '=== Severity Distribution ===\n';
+    csv += 'Severity,Count,Percentage\n';
+    severity.forEach(s => { csv += `${s.severity},${s.count},${s.percentage}%\n`; });
+    csv += '\n=== Timeline (24h) ===\n';
+    csv += 'Hour,Count\n';
+    timeline.forEach(t => { csv += `${t.hour},${t.count}\n`; });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `traceguard-report-${new Date().toISOString().substring(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch(e) {
+    alert('Export failed: ' + e.message);
   }
 }
 
-/* -------- Navigation -------- */
+/* ═══════════════════════════════════════════════════════════════
+   NAVIGATION
+   ═══════════════════════════════════════════════════════════════ */
 
-function navigate(section) {
-  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('bg-slate-800', 'text-white'));
-  const link = document.querySelector(`[data-section="${section}"]`);
-  if (link) link.classList.add('bg-slate-800', 'text-white');
+async function navigate(section) {
+  currentSection = section || 'dashboard';
+  // Update sidebar
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  const link = document.querySelector(`[data-section="${currentSection}"]`);
+  if (link) link.classList.add('active');
+
+  // Update title
+  const titles = { dashboard: 'Dashboard', alerts: 'Detection Alerts', activity: 'User Activity', audit: 'Admin Audit Trail', 'blocked-ips': 'Blocked IPs', tenants: 'Tenants', 'api-keys': 'API Keys', integrations: 'Integrations' };
+  const titleEl = document.getElementById('page-title');
+  if (titleEl) titleEl.textContent = titles[currentSection] || 'Dashboard';
+
+  // Destroy charts before loading new section
+  Object.keys(charts).forEach(k => destroyChart(k));
+
+  // Load content
   const content = document.getElementById('main-content');
-  content.innerHTML = '<div class="text-center py-20 text-gray-400"><i class="fas fa-spinner fa-spin text-2xl"></i></div>';
-  const sections = { dashboard: DashboardSection, tenants: TenantsSection, 'api-keys': ApiKeysSection, audit: AuditSection };
-  const loader = sections[section] || DashboardSection;
-  loader().then(html => content.innerHTML = html);
+  if (!content) return;
+  content.innerHTML = '<div class="flex items-center justify-center py-20" style="color: var(--text-muted);"><i class="fas fa-spinner fa-spin text-xl mr-3"></i> Loading...</div>';
+
+  const sections = {
+    dashboard: DashboardSection,
+    alerts: AlertsSection,
+    activity: ActivitySection,
+    audit: AuditSection,
+    'blocked-ips': BlockedIpsSection,
+    tenants: TenantsSection,
+    'api-keys': ApiKeysSection,
+    integrations: IntegrationsSection
+  };
+  const loader = sections[currentSection] || DashboardSection;
+  try {
+    content.innerHTML = await loader();
+  } catch(e) {
+    content.innerHTML = `<div class="p-6 text-red-400"><i class="fas fa-exclamation-triangle mr-2"></i> ${e.message}</div>`;
+  }
 }
 
 window.addEventListener('hashchange', () => {
@@ -399,58 +931,24 @@ window.addEventListener('hashchange', () => {
   navigate(section);
 });
 
-/* -------- Modals -------- */
-
-function showCreateTenantModal() {
-  document.getElementById('tenant-modal').classList.remove('hidden');
-  document.getElementById('tenant-form').onsubmit = async (e) => {
-    e.preventDefault();
-    const fd = new FormData(e.target);
-    try {
-      await api('POST', '/api/v1/admin/tenants', { name: fd.get('name'), slug: fd.get('slug') });
-      closeCreateTenantModal();
-      navigate('tenants');
-    } catch (err) {
-      alert('Erro: ' + err.message);
-    }
-  };
-}
-function closeCreateTenantModal() { document.getElementById('tenant-modal').classList.add('hidden'); }
-
-function showCreateApiKeyModal() {
-  document.getElementById('apikey-modal').classList.remove('hidden');
-  document.getElementById('apikey-form').onsubmit = async (e) => {
-    e.preventDefault();
-    const fd = new FormData(e.target);
-    try {
-      const res = await api('POST', '/api/v1/admin/api-keys', { tenantId: fd.get('tenantId'), name: fd.get('name'), scopes: [fd.get('scope')] });
-      alert(`API Key criada!\n\nGuarde este token:\n${res.data.rawApiKey}`);
-      closeCreateApiKeyModal();
-      navigate('api-keys');
-    } catch (err) {
-      alert('Erro: ' + err.message);
-    }
-  };
-}
-function closeCreateApiKeyModal() { document.getElementById('apikey-modal').classList.add('hidden'); }
-
-async function revokeApiKey(id) {
-  if (!confirm('Tem certeza que deseja revogar esta API Key?')) return;
-  try {
-    await api('PATCH', `/api/v1/admin/api-keys/${id}/revoke`);
-    navigate('api-keys');
-  } catch (err) {
-    alert('Erro: ' + err.message);
-  }
+function toggleTheme() {
+  const current = getTheme();
+  setTheme(current === 'dark' ? 'light' : 'dark');
+  // Re-render charts
+  if (currentSection === 'dashboard') navigate('dashboard');
 }
 
-/* -------- Render -------- */
+/* ═══════════════════════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════════════════════ */
 
 function render() {
+  setTheme(getTheme());
   const app = document.getElementById('app');
   if (!isAuth()) {
     app.innerHTML = LoginView();
-    document.getElementById('login-form').onsubmit = async (e) => {
+    const form = document.getElementById('login-form');
+    if (form) form.onsubmit = async (e) => {
       e.preventDefault();
       const fd = new FormData(e.target);
       const errEl = document.getElementById('login-error');
@@ -458,24 +956,16 @@ function render() {
         await login(fd.get('email'), fd.get('password'));
         render();
       } catch (err) {
-        errEl.textContent = err.message;
-        errEl.classList.remove('hidden');
+        if (errEl) { errEl.textContent = err.message; errEl.classList.remove('hidden'); }
       }
     };
   } else {
-    app.innerHTML = DashboardView();
+    app.innerHTML = MainLayout();
     navigate(location.hash.replace('#', '') || 'dashboard');
   }
 }
 
 render();
 </script>
-
-<div class="fixed bottom-4 right-4 z-50">
-  <a href="${API}/swagger-ui.html" target="_blank" class="bg-white shadow-lg rounded-lg px-4 py-2 text-xs text-gray-600 hover:text-indigo-600 border transition flex items-center gap-2">
-    <i class="fas fa-book"></i> Swagger UI
-  </a>
-</div>
-
 </body>
 </html>

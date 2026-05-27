@@ -4,6 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.traceguard.auth.JwtAuthFilter;
 import com.traceguard.auth.JwtTokenService;
 import com.traceguard.common.web.RequestCorrelationLoggingFilter;
+import com.traceguard.monitoring.activity.UserActivityFilter;
+import com.traceguard.monitoring.activity.UserActivityService;
+import com.traceguard.monitoring.detection.BlockedIpFilter;
+import com.traceguard.monitoring.detection.BlockedIpRepository;
 import com.traceguard.ratelimit.RateLimitFilter;
 import com.traceguard.ratelimit.RateLimiterService;
 import com.traceguard.tenant.TenantRepository;
@@ -34,6 +38,8 @@ public class SecurityConfig {
                         RateLimiterService rateLimiter,
                         MeterRegistry meterRegistry,
                         ObjectMapper objectMapper,
+                        UserActivityService userActivityService,
+                        BlockedIpRepository blockedIpRepository,
                         @Value("${traceguard.rate-limit.login-per-minute}") int loginPerMinute,
                         @Value("${traceguard.rate-limit.refresh-per-minute}") int refreshPerMinute,
                         @Value("${traceguard.rate-limit.audit-ingest-per-minute}") int auditIngestPerMinute,
@@ -43,7 +49,13 @@ public class SecurityConfig {
                         throws Exception {
                 http
                                 .csrf(csrf -> csrf.disable())
-                                .headers(headers -> headers.frameOptions(fo -> fo.disable()))
+                                .headers(headers -> headers
+                                        .frameOptions(fo -> fo.disable())
+                                        .contentTypeOptions(cto -> cto.disable())
+                                        .httpStrictTransportSecurity(hsts -> hsts
+                                                .includeSubDomains(true)
+                                                .maxAgeInSeconds(31536000))
+                                        .xssProtection(xss -> xss.disable()))
                                 .sessionManagement(sm -> sm.sessionCreationPolicy(STATELESS))
                                 .formLogin(form -> form.disable())
                                 .httpBasic(basic -> basic.disable())
@@ -67,8 +79,17 @@ public class SecurityConfig {
                                                                                                                 "FORBIDDEN",
                                                                                                                 "Operation is not allowed")))
                                 .addFilterBefore(
+                                                new SecurityHeadersFilter(),
+                                                UsernamePasswordAuthenticationFilter.class)
+                                .addFilterBefore(
                                                 new RequestCorrelationLoggingFilter(meterRegistry),
                                                 UsernamePasswordAuthenticationFilter.class)
+                                .addFilterBefore(
+                                                new BlockedIpFilter(blockedIpRepository, objectMapper),
+                                                AuthorizationFilter.class)
+                                .addFilterBefore(
+                                                new UserActivityFilter(userActivityService, objectMapper),
+                                                AuthorizationFilter.class)
                                 .addFilterBefore(
                                                 new JwtAuthFilter(jwtTokenService, objectMapper, tenantRepository, meterRegistry),
                                                 AuthorizationFilter.class)
@@ -104,6 +125,8 @@ public class SecurityConfig {
                                                 .hasAnyRole("SUPER_ADMIN", "AUDITOR")
                                                 .requestMatchers(HttpMethod.GET, "/api/v1/admin/audit-events")
                                                 .hasAnyRole("SUPER_ADMIN", "TENANT_ADMIN")
+                                                .requestMatchers("/api/v1/admin/activity/**")
+                                                .hasAnyRole("SUPER_ADMIN", "TENANT_ADMIN", "AUDITOR")
                                                 .requestMatchers(HttpMethod.POST, "/api/v1/admin/api-keys")
                                                 .hasAnyRole("SUPER_ADMIN", "TENANT_ADMIN", "OPERATOR")
                                                 .requestMatchers(HttpMethod.GET, "/api/v1/admin/api-keys")
@@ -112,8 +135,12 @@ public class SecurityConfig {
                                                 .hasAnyRole("SUPER_ADMIN", "TENANT_ADMIN", "OPERATOR")
                                                 .requestMatchers("/api/v1/admin/dashboard/**")
                                                 .hasAnyRole("SUPER_ADMIN", "TENANT_ADMIN", "AUDITOR", "OPERATOR")
-                                                .requestMatchers(HttpMethod.GET, "/api/v1/admin/integrations/**")
-                                                .hasAnyRole("SUPER_ADMIN", "TENANT_ADMIN")
+                                .requestMatchers("/api/v1/admin/detection/alerts/**")
+                                .hasAnyRole("SUPER_ADMIN", "TENANT_ADMIN", "AUDITOR")
+                                .requestMatchers("/api/v1/admin/detection/blocked-ips/**")
+                                .hasAnyRole("SUPER_ADMIN", "TENANT_ADMIN")
+                                .requestMatchers(HttpMethod.GET, "/api/v1/admin/integrations/**")
+                                .hasAnyRole("SUPER_ADMIN", "TENANT_ADMIN")
                                                 .requestMatchers(HttpMethod.PUT, "/api/v1/admin/integrations/**")
                                                 .hasAnyRole("SUPER_ADMIN", "TENANT_ADMIN")
                                                 .requestMatchers(HttpMethod.DELETE, "/api/v1/admin/integrations/**")
