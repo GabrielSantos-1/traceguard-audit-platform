@@ -42,6 +42,14 @@ public class UserActivityService {
 
     @Async
     public void recordAsync(ActivityRecord record) {
+        // tenant_id is NOT NULL in user_activity_log: an event with no tenant (an anonymous request
+        // that never authenticated, for example) cannot be attributed to anyone. Skipping it here is
+        // correct; letting it through failed the insert on a background thread and filled the log
+        // with constraint violations for requests that had already been answered successfully.
+        if (record.tenantId() == null) {
+            log.debug("event=activity_skipped reason=no_tenant path={}", record.httpPath());
+            return;
+        }
         try {
             UserActivityEvent event = new UserActivityEvent();
             event.setTenantId(record.tenantId());
