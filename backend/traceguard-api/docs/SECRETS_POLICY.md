@@ -88,28 +88,27 @@ nova — não há rotação automática.
 
 ---
 
-## 7. Incidente histórico conhecido (não resolvido no histórico git)
+## 7. Incidente histórico: senha de desenvolvimento no histórico git (RESOLVIDO)
 
-O commit **`30172ed`** contém `[senha-de-dev-removida]` como senha do PostgreSQL em `docker-compose.yml`. O valor foi
-removido das versões posteriores dos arquivos, mas **permanece recuperável no histórico do repositório**.
-Isso está registrado pelo próprio projeto em `docs/CHECKPOINT-FASE4.md` e `docs/PLANO-EVOLUCAO.md`.
+Um commit antigo do projeto continha uma senha de desenvolvimento (`[senha-de-dev-removida]`) como senha do
+PostgreSQL no `docker-compose.yml`. Era valor de desenvolvimento local — nunca foi credencial de ambiente
+exposto — mas permanecia recuperável no histórico do repositório.
 
-Ações:
+**Resolvido em 18/10/2026.** O histórico foi reescrito com `git filter-repo --replace-text`, de modo que a
+string não existe em nenhum commit, branch ou tag. A verificação se faz em clone novo:
 
-1. **Trate `[senha-de-dev-removida]` como comprometido.** Se ele já foi usado em qualquer ambiente acessível de rede,
-   rotacione a senha (seção 6). Como é um valor de desenvolvimento local, o risco prático é baixo — mas o
-   tratamento correto é rotação, não desconsideração.
-2. **Antes de distribuir o template** (venda, fork público, zip da Gumroad), purgue o histórico:
+```bash
+git clone <url-do-repo> /tmp/verify && cd /tmp/verify
+git log --all -p -S '[senha-de-dev-removida]' | wc -l    # precisa retornar 0
+```
 
-   ```bash
-   git filter-repo --force --replace-text <(echo '[senha-de-dev-removida]') --refs HEAD
-   git push --force-with-lease origin master
-   ```
+Consequências da reescrita:
 
-   Isso **reescreve todos os commits** e invalida clones e forks existentes. Combine antes com qualquer
-   pessoa que tenha cópia do repositório.
-
----
+- **Todos os hashes de commits anteriores mudaram.** Referências a SHAs em documentos antigos estão
+  desatualizadas — vale o conteúdo, não o hash.
+- Clones e forks existentes ficaram divergentes; quem tiver cópia precisa re-clonar.
+- Se esse valor de senha foi usado em algum ambiente acessível de rede, **rotacione** (seção 6). Como era
+  senha de desenvolvimento local, o risco prático é baixo — mas o tratamento correto é rotação.
 
 ## 8. O que nunca fazer
 

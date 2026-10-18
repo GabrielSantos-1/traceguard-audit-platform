@@ -54,7 +54,7 @@ Motor de regras de detecção de ameaças:
 - ✅ SecurityHeadersFilter: CSP, HSTS, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, X-Frame-Options
 
 ### Fase 5 — Publicação
-- Git filter-repo (purge [senha-de-dev-removida])
+- ✅ Git filter-repo (purge da senha de dev) — concluído em 18/10/2026
 - Repositório público
 - Página Gumroad atualizada
 - Post Dev.to + Reddit + LinkedIn

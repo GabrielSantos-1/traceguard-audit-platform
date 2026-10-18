@@ -483,7 +483,7 @@ services:
 | `f1c25d5` | Initial commit (clean, no secrets, no build artifacts) |
 | `30172ed` | Hardening API key scopes + JDK21 Mockito fix |
 
-> ⚠️ O commit `30172ed` contém `[senha-de-dev-removida]` como password do PostgreSQL no `docker-compose.yml`. Necessário `git filter-repo` antes de publicar.
+> ✅ **Resolvido em 18/10/2026:** o histórico foi reescrito com `git filter-repo` e a senha não existe em nenhum commit. Os hashes desta tabela referem-se ao histórico **anterior** à reescrita.
 
 ---
 
@@ -491,7 +491,7 @@ services:
 
 | Tarefa | Prioridade | Descrição |
 |--------|-----------|-----------|
-| Purge [senha-de-dev-removida] | 🔴 Crítica | `git filter-repo --force --replace-text` |
+| ✅ Purge da senha de dev | Concluída | `git filter-repo` executado em 18/10/2026 |
 | Push público | 🔴 Crítica | `git push origin --force --all` |
 | Git tags | 🟡 Média | Criar tag v1.0.0 |
 | CI/CD | 🟡 Média | Verificar GitHub Actions |
