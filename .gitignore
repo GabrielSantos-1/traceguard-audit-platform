@@ -10,7 +10,7 @@ dist/
 **/node_modules/
 **/.m2/
 **/.mvn-cache/
-backend/traceguard-api/.mvn/
+backend/traceguard-api/.mvn/wrapper/maven-wrapper.jar
 
 # =========== LOGS ===========
 *.log
@@ -46,7 +46,6 @@ Desktop.ini
 # =========== PROJECT-SPECIFIC ===========
 AGENTS.md
 backend/traceguard-api/AGENTS.md
-backend/traceguard-api/docs/
 
 # =========== FRONTEND ===========
 frontend/dist/
