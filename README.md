@@ -2,6 +2,7 @@
 
 > Kit de Governança seguro, pronto para deploy — API Spring Boot com JWT, RBAC, rate limiting, auditoria e isolamento multi-tenant.
 
+[![Backend CI](https://github.com/GabrielSantos-1/traceguard-audit-platform/actions/workflows/traceguard-backend-ci.yml/badge.svg?branch=master)](https://github.com/GabrielSantos-1/traceguard-audit-platform/actions/workflows/traceguard-backend-ci.yml)
 [![Java](https://img.shields.io/badge/Java-21-%23ED8B00)](https://adoptium.net/)
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.4.3-%236DB33F)](https://spring.io/projects/spring-boot)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-%23336791)](https://postgresql.org)
