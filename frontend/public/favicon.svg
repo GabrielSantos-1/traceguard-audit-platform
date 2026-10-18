@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="TraceGuard">
+  <path d="M16 2 4 7v9c0 7 5 12 12 14 7-2 12-7 12-14V7L16 2z" fill="#0f172a"/>
+  <path d="M16 4.4 5.9 8.5v7.5c0 6 4.3 10.4 10.1 12.2 5.8-1.8 10.1-6.2 10.1-12.2V8.5L16 4.4z" fill="#14b8a6"/>
+  <path d="M14.6 19.4 11 15.8l1.8-1.8 1.8 1.8 4.6-4.6 1.8 1.8-6.4 6.4z" fill="#0f172a"/>
+</svg>

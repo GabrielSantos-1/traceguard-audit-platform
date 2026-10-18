@@ -86,6 +86,32 @@ cd backend/traceguard-api && ./mvnw -q -DskipTests package && cd ../..
 docker compose -f backend/infra/docker-compose.yml --project-name traceguard up -d --build
 ```
 
+### Dashboard (sem Docker)
+
+O dashboard é servido pelo **próprio jar** — mesma porta da API, sem Node e sem Docker.
+O perfil `h2` usa banco em memória e dispensa Postgres e Redis:
+
+```bash
+cd backend/traceguard-api
+./mvnw -DskipTests package
+java -jar target/traceguard-api-*.jar --spring.profiles.active=h2
+```
+
+Acesse `http://localhost:8080/` e entre com `admin@traceguard.local` / `admin123`.
+
+> O perfil `h2` apaga os dados ao encerrar: serve para demonstração e avaliação, não para produção.
+
+### Frontend (fonte)
+
+O dashboard é um app React + TypeScript + Tailwind em `frontend/`. O build versionado dentro de
+`backend/traceguard-api/src/main/resources/static/` é o que vai no jar, então **compilar o backend
+já basta**. Node só é necessário para alterar a interface:
+
+```bash
+./scripts/build-frontend.sh   # build do Vite + cópia para os recursos estáticos
+cd backend/traceguard-api && ./mvnw -DskipTests package
+```
+
 ### Swagger UI
 
 Acesse `http://localhost:8080/swagger-ui.html` para explorar e testar todos os endpoints interativamente.

@@ -109,7 +109,26 @@ public class SecurityConfig {
                                                                 adminWritePerMinute),
                                                 AuthorizationFilter.class)
                                 .authorizeHttpRequests(auth -> auth
-                                                .requestMatchers("/", "/index.html", "/favicon.ico").permitAll()
+                                                // Dashboard static resources. The React build emits hashed files under
+                                                // /assets plus its favicon; the old single-file dashboard had everything
+                                                // inline and needed none of this. Without these the browser receives 401
+                                                // for the bundle and the page renders blank.
+                                                .requestMatchers(
+                                                                "/",
+                                                                "/index.html",
+                                                                "/favicon.ico",
+                                                                "/favicon.svg",
+                                                                "/icons.svg",
+                                                                "/manifest.webmanifest",
+                                                                "/assets/**",
+                                                                "/*.js",
+                                                                "/*.css",
+                                                                "/*.png",
+                                                                "/*.svg",
+                                                                "/*.ico",
+                                                                "/*.webp",
+                                                                "/*.map")
+                                                .permitAll()
                                                 .requestMatchers("/actuator/health/**", "/actuator/info").permitAll()
                                                 .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/v3/api-docs").permitAll()
                                                 .requestMatchers("/h2-console/**").permitAll()

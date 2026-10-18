@@ -58,6 +58,10 @@ docker exec traceguard-redis redis-cli ping
 
 Swagger UI para teste manual de endpoints: `http://localhost:8080/swagger-ui.html`.
 
+Dashboard (servido pelo jar, mesma porta): `http://localhost:8080/` — login `admin@traceguard.local`.
+Recursos estáticos ficam liberados em `/`, `/assets/**`, `/*.svg`, `/*.css`, `/*.js`; as rotas da API
+continuam exigindo JWT (ou chave de API em `/api/v1/audit/**`).
+
 ---
 
 ## 4. Logs
