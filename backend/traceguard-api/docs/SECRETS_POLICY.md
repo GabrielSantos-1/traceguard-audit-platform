@@ -91,7 +91,7 @@ nova — não há rotação automática.
 ## 7. Incidente histórico: senha de desenvolvimento no histórico git (RESOLVIDO)
 
 Um commit antigo do projeto continha a **senha de desenvolvimento do PostgreSQL** escrita diretamente no
-PostgreSQL no `docker-compose.yml`. Era valor de desenvolvimento local — nunca foi credencial de ambiente
+arquivo `docker-compose.yml`. Era valor de desenvolvimento local — nunca foi credencial de ambiente
 exposto — mas permanecia recuperável no histórico do repositório.
 
 **Resolvido em 18/10/2026.** O histórico foi reescrito com `git filter-repo --replace-text`, de modo que a
