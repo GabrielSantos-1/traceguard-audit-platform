@@ -90,7 +90,7 @@ nova — não há rotação automática.
 
 ## 7. Incidente histórico: senha de desenvolvimento no histórico git (RESOLVIDO)
 
-Um commit antigo do projeto continha uma senha de desenvolvimento (`[senha-de-dev-removida]`) como senha do
+Um commit antigo do projeto continha a **senha de desenvolvimento do PostgreSQL** escrita diretamente no
 PostgreSQL no `docker-compose.yml`. Era valor de desenvolvimento local — nunca foi credencial de ambiente
 exposto — mas permanecia recuperável no histórico do repositório.
 
@@ -99,7 +99,7 @@ string não existe em nenhum commit, branch ou tag. A verificação se faz em cl
 
 ```bash
 git clone <url-do-repo> /tmp/verify && cd /tmp/verify
-git log --all -p -S '[senha-de-dev-removida]' | wc -l    # precisa retornar 0
+git log --all -p -S '<valor-antigo>' | wc -l    # precisa retornar 0
 ```
 
 Consequências da reescrita:
