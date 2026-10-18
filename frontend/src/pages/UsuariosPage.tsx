@@ -1,70 +1,121 @@
-import { Shield, UserCheck } from "lucide-react"
+import { useEffect, useState } from "react"
+import { Info, Shield, Users } from "lucide-react"
+import { fetchKpi } from "../services/api"
+import { useRefresh } from "../contexts/RefreshContext"
+import { ErrorBlock, LoadingBlock } from "../components/States"
 
-const mockUsers = [
-  { name: "Admin Principal", email: "admin@traceguard.local", role: "SUPER_ADMIN", status: "active" },
-]
-
+/**
+ * The four roles the backend actually enforces (com.traceguard.auth.AdminRole).
+ * This page used to render a hardcoded user list and invented per-role counts, which reads as data
+ * on a security tool; the only real number available today is the active-user count from the KPI.
+ */
 const roles = [
-  { name: "SUPER_ADMIN", desc: "Acesso total ao sistema", count: 1, color: "text-purple-400" },
-  { name: "TENANT_ADMIN", desc: "Administração por tenant", count: 0, color: "text-blue-400" },
-  { name: "AUDITOR", desc: "Consultas e relatórios", count: 0, color: "text-green-400" },
-  { name: "OPERATOR", desc: "Operações do dia a dia", count: 0, color: "text-yellow-400" },
+  {
+    name: "SUPER_ADMIN",
+    desc: "Acesso total, inclusive entre tenants",
+    color: "text-violet-400",
+    bg: "bg-violet-500/10",
+  },
+  {
+    name: "TENANT_ADMIN",
+    desc: "Administração restrita ao próprio tenant",
+    color: "text-blue-400",
+    bg: "bg-blue-500/10",
+  },
+  {
+    name: "AUDITOR",
+    desc: "Consultas, relatórios e trilha de auditoria",
+    color: "text-emerald-400",
+    bg: "bg-emerald-500/10",
+  },
+  {
+    name: "OPERATOR",
+    desc: "Operações do dia a dia, sem administração",
+    color: "text-amber-400",
+    bg: "bg-amber-500/10",
+  },
 ]
 
 export default function UsuariosPage() {
+  const { signal, markUpdated, refresh } = useRefresh()
+  const [activeUsers, setActiveUsers] = useState<number | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    setLoading(true)
+    setError(null)
+    fetchKpi()
+      .then((kpi) => {
+        if (!alive) return
+        setActiveUsers(kpi.activeUsers)
+        markUpdated()
+      })
+      .catch((err) => {
+        if (alive) setError(err instanceof Error ? err.message : "Falha ao carregar os usuários")
+      })
+      .finally(() => {
+        if (alive) setLoading(false)
+      })
+    return () => {
+      alive = false
+    }
+  }, [signal, markUpdated])
+
   return (
     <div className="space-y-5">
       <div>
         <h2 className="text-lg font-bold text-white">Usuários</h2>
-        <p className="text-xs text-dark-700 mt-1">Gerenciamento de contas e permissões RBAC</p>
+        <p className="text-xs text-slate-400 mt-1">Contas e permissões RBAC</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {roles.map((r) => (
-          <div key={r.name} className="rounded-xl bg-dark-900 border border-dark-800 p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Shield className={`w-4 h-4 ${r.color}`} />
-              <span className={`text-xs font-bold ${r.color}`}>{r.name}</span>
-            </div>
-            <p className="text-2xl font-bold text-white">{r.count}</p>
-            <p className="text-[11px] text-dark-700 mt-0.5">{r.desc}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="rounded-xl bg-dark-900 border border-dark-800 overflow-hidden">
-        <div className="px-4 py-3 border-b border-dark-800">
-          <h3 className="text-xs font-semibold text-gray-200">Usuários Cadastrados</h3>
+      {loading ? (
+        <div className="rounded-xl bg-dark-900 border border-dark-800">
+          <LoadingBlock />
         </div>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-dark-800">
-              <th className="text-left px-4 py-3 text-[11px] font-semibold text-dark-700 uppercase">Nome</th>
-              <th className="text-left px-4 py-3 text-[11px] font-semibold text-dark-700 uppercase">Email</th>
-              <th className="text-left px-4 py-3 text-[11px] font-semibold text-dark-700 uppercase">Papel</th>
-              <th className="text-left px-4 py-3 text-[11px] font-semibold text-dark-700 uppercase">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-dark-800/50">
-            {mockUsers.map((u) => (
-              <tr key={u.email} className="hover:bg-dark-800/30">
-                <td className="px-4 py-3 text-xs font-medium text-gray-200">{u.name}</td>
-                <td className="px-4 py-3 text-xs text-dark-700">{u.email}</td>
-                <td className="px-4 py-3">
-                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400">
-                    {u.role}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="flex items-center gap-1 text-xs text-green-400">
-                    <UserCheck className="w-3 h-3" /> Ativo
-                  </span>
-                </td>
-              </tr>
+      ) : error ? (
+        <div className="rounded-xl bg-dark-900 border border-dark-800">
+          <ErrorBlock message={error} onRetry={refresh} />
+        </div>
+      ) : (
+        <>
+          <div className="rounded-xl bg-dark-900 border border-dark-800 p-4 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-emerald-500/10">
+              <Users className="w-4 h-4 text-emerald-400" aria-hidden="true" />
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold text-slate-400 tracking-wider">USUÁRIOS ATIVOS</p>
+              <p className="text-2xl font-bold text-white tabular-nums">
+                {(activeUsers ?? 0).toLocaleString("pt-BR")}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {roles.map((role) => (
+              <div key={role.name} className="rounded-xl bg-dark-900 border border-dark-800 p-4">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className={`p-1.5 rounded-lg ${role.bg}`}>
+                    <Shield className={`w-3.5 h-3.5 ${role.color}`} aria-hidden="true" />
+                  </div>
+                  <span className={`text-xs font-bold ${role.color}`}>{role.name}</span>
+                </div>
+                <p className="text-[11px] text-slate-400">{role.desc}</p>
+              </div>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </div>
+
+          <div className="flex items-start gap-2 rounded-xl bg-dark-900 border border-dark-800 px-4 py-3">
+            <Info className="w-3.5 h-3.5 text-slate-400 mt-0.5 shrink-0" aria-hidden="true" />
+            <p className="text-[11px] text-slate-400">
+              A listagem e a gestão de contas ainda não têm endpoint no backend — por isso esta tela
+              mostra apenas os papéis que o sistema aplica e a contagem real de usuários ativos. Os
+              dados de usuários por papel aparecerão aqui quando a API existir.
+            </p>
+          </div>
+        </>
+      )}
     </div>
   )
 }

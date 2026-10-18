@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react"
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts"
 import { fetchSeverityDistribution, type SeverityItem } from "../services/api"
+import { useRefresh } from "../contexts/RefreshContext"
+import { EmptyBlock, ErrorBlock, LoadingBlock } from "./States"
 
 /**
  * Severity colours have to be told apart at a glance. The previous set used #F59E0B (amber) for HIGH
@@ -24,25 +26,49 @@ const labelMap: Record<string, string> = {
 const UNKNOWN_COLOR = "#64748B"
 
 export default function SeverityChart() {
+  const { signal, markUpdated, refresh } = useRefresh()
   const [data, setData] = useState<SeverityItem[]>([])
   const [total, setTotal] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    let alive = true
+    setLoading(true)
+    setError(null)
     fetchSeverityDistribution()
       .then((items) => {
+        if (!alive) return
         setData(items)
         setTotal(items.reduce((acc, i) => acc + i.count, 0))
+        markUpdated()
       })
-      .catch((err) => console.error("severity", err))
-  }, [])
+      .catch((err) => {
+        if (alive) setError(err instanceof Error ? err.message : "Falha ao carregar a severidade")
+      })
+      .finally(() => {
+        if (alive) setLoading(false)
+      })
+    return () => {
+      alive = false
+    }
+  }, [signal, markUpdated])
 
-  if (data.length === 0) {
+  const header = (
+    <h3 className="text-sm font-semibold text-gray-200 mb-4">Eventos por Severidade (24h)</h3>
+  )
+
+  if (loading || error || data.length === 0) {
     return (
       <div className="rounded-xl bg-dark-900 border border-dark-800 p-5">
-        <h3 className="text-sm font-semibold text-gray-200 mb-4">Eventos por Severidade (24h)</h3>
-        <div className="h-44 flex items-center justify-center">
-          <p className="text-xs text-slate-400">Nenhum evento nas últimas 24h</p>
-        </div>
+        {header}
+        {loading ? (
+          <LoadingBlock />
+        ) : error ? (
+          <ErrorBlock message={error} onRetry={refresh} />
+        ) : (
+          <EmptyBlock message="Nenhum evento nas últimas 24h" />
+        )}
       </div>
     )
   }

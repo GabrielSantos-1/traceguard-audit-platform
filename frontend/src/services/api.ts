@@ -1,20 +1,27 @@
 const API_BASE = ""
 
+const ACCESS_KEY = "tg_token"
+const REFRESH_KEY = "tg_refresh"
+const REQUEST_TIMEOUT_MS = 15000
+
+export interface ApiMeta {
+  correlationId: string
+  page?: number
+  size?: number
+  totalElements?: number
+  totalPages?: number
+  hasNext?: boolean
+  hasPrevious?: boolean
+}
+
 interface ApiResponse<T> {
   success: boolean
   data: T
-  meta: {
-    correlationId: string
-    page?: number
-    size?: number
-    totalElements?: number
-    totalPages?: number
-    hasNext?: boolean
-    hasPrevious?: boolean
-  }
+  meta?: ApiMeta
+  error?: { code?: string; message?: string }
 }
 
-class ApiError extends Error {
+export class ApiError extends Error {
   code: string
   status: number
 
@@ -25,22 +32,98 @@ class ApiError extends Error {
   }
 }
 
-function getToken(): string | null {
-  return localStorage.getItem("tg_token")
+export function getToken(): string | null {
+  return localStorage.getItem(ACCESS_KEY)
 }
 
-function setToken(token: string) {
-  localStorage.setItem("tg_token", token)
+export function getRefreshToken(): string | null {
+  return localStorage.getItem(REFRESH_KEY)
 }
 
-function clearToken() {
-  localStorage.removeItem("tg_token")
+/**
+ * The backend rotates refresh tokens on every use, so both values have to be replaced together —
+ * keeping the old refresh token would make the next renewal fail.
+ */
+export function setTokens(accessToken: string, refreshToken?: string | null) {
+  localStorage.setItem(ACCESS_KEY, accessToken)
+  if (refreshToken) localStorage.setItem(REFRESH_KEY, refreshToken)
+}
+
+export function clearTokens() {
+  localStorage.removeItem(ACCESS_KEY)
+  localStorage.removeItem(REFRESH_KEY)
+}
+
+// --- session expiry notification -------------------------------------------------------------
+// The UI has to know the difference between "the API returned no rows" and "your session ended".
+
+type SessionExpiredHandler = (reason: string) => void
+const sessionExpiredHandlers = new Set<SessionExpiredHandler>()
+
+export function onSessionExpired(handler: SessionExpiredHandler): () => void {
+  sessionExpiredHandlers.add(handler)
+  return () => sessionExpiredHandlers.delete(handler)
+}
+
+function expireSession(reason: string) {
+  clearTokens()
+  sessionExpiredHandlers.forEach((handler) => handler(reason))
+}
+
+// --- token renewal ---------------------------------------------------------------------------
+
+let refreshInFlight: Promise<boolean> | null = null
+
+/**
+ * Renews the access token. Every panel on the dashboard can hit 401 in the same instant, so the
+ * renewal is single-flight: concurrent callers await the same request instead of racing each other
+ * and burning through the rotating refresh token.
+ */
+function refreshSession(): Promise<boolean> {
+  if (!refreshInFlight) {
+    refreshInFlight = doRefresh().finally(() => {
+      refreshInFlight = null
+    })
+  }
+  return refreshInFlight
+}
+
+async function doRefresh(): Promise<boolean> {
+  const refreshToken = getRefreshToken()
+  if (!refreshToken) return false
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken }),
+    })
+    if (!res.ok) return false
+    const json = await res.json()
+    const data = json?.data
+    if (!data?.accessToken) return false
+    setTokens(data.accessToken, data.refreshToken)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** Reads a body that is not guaranteed to be JSON (a proxy error page, an empty 500...). */
+async function readJson(res: Response): Promise<any> {
+  const text = await res.text()
+  if (!text) return null
+  try {
+    return JSON.parse(text)
+  } catch {
+    return null
+  }
 }
 
 async function request<T>(
   method: string,
   path: string,
   body?: unknown,
+  retryOn401 = true,
 ): Promise<ApiResponse<T>> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -48,21 +131,71 @@ async function request<T>(
   const token = getToken()
   if (token) headers["Authorization"] = `Bearer ${token}`
 
-  const res = await fetch(`${API_BASE}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  })
+  // Without a timeout a hung request left the panel spinning forever.
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
 
-  const json = await res.json()
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    })
 
-  if (!res.ok) {
-    const msg = json?.error?.message || json?.message || "Erro desconhecido"
-    const code = json?.error?.code || "ERROR"
-    throw new ApiError(code, msg, res.status)
+    const json = await readJson(res)
+
+    // The access token expires mid-session: renew it once and replay the request instead of
+    // showing the user a dashboard that is silently empty.
+    if (res.status === 401 && retryOn401 && !path.startsWith("/api/v1/auth/")) {
+      const renewed = await refreshSession()
+      if (renewed) {
+        return request<T>(method, path, body, false)
+      }
+      expireSession("Sua sessão expirou. Entre novamente.")
+      throw new ApiError("SESSION_EXPIRED", "Sessão expirada", 401)
+    }
+
+    if (!res.ok) {
+      const msg = json?.error?.message || json?.message || `Erro HTTP ${res.status}`
+      const code = json?.error?.code || "ERROR"
+      throw new ApiError(code, msg, res.status)
+    }
+
+    return (json ?? { success: true, data: undefined as T }) as ApiResponse<T>
+  } catch (err) {
+    if (err instanceof ApiError) throw err
+    if ((err as Error)?.name === "AbortError") {
+      throw new ApiError("TIMEOUT", "O servidor demorou demais para responder", 0)
+    }
+    throw new ApiError("NETWORK", "Não foi possível falar com o servidor", 0)
+  } finally {
+    clearTimeout(timer)
   }
+}
 
-  return json as ApiResponse<T>
+/** Raw request for the endpoints that answer a bare value instead of the {success, data} envelope. */
+async function requestRaw(path: string, retryOn401 = true): Promise<Response> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+  try {
+    const token = getToken()
+    const res = await fetch(`${API_BASE}${path}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      signal: controller.signal,
+    })
+    if (res.status === 401 && retryOn401) {
+      const renewed = await refreshSession()
+      if (renewed) {
+        clearTimeout(timer)
+        return requestRaw(path, false)
+      }
+      expireSession("Sua sessão expirou. Entre novamente.")
+    }
+    return res
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 export const api = {
@@ -133,8 +266,29 @@ export interface CriticalAlert {
 
 export async function login(email: string, password: string): Promise<LoginData> {
   const res = await api.post<LoginData>("/api/v1/auth/login", { email, password })
-  setToken(res.data.accessToken)
+  // Keep the refresh token as well: without it the session cannot be renewed and dies at the first 401.
+  setTokens(res.data.accessToken, res.data.refreshToken)
   return res.data
+}
+
+/**
+ * Ends the session on the server too. The backend revokes the refresh token, so a copy of it cannot
+ * be replayed after the user logs out.
+ */
+export async function logout(): Promise<void> {
+  const refreshToken = getRefreshToken()
+  if (!refreshToken) {
+    clearTokens()
+    return
+  }
+  try {
+    await api.post("/api/v1/auth/logout", { refreshToken })
+  } catch (err) {
+    // The local session has to end even when the server cannot be reached.
+    console.error("logout", err)
+  } finally {
+    clearTokens()
+  }
 }
 
 export async function fetchKpi(): Promise<DashboardKpi> {
@@ -164,12 +318,9 @@ export async function fetchRecentEvents(): Promise<RecentEvent[]> {
  * cannot go through the shared request helper.
  */
 export async function fetchActiveAlertCount(): Promise<number> {
-  const token = getToken()
-  const res = await fetch(`${API_BASE}/api/v1/admin/detection/alerts/count`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  })
-  if (!res.ok) throw new ApiError("ERROR", `HTTP ${res.status}`, res.status)
-  return Number(await res.text())
+  const res = await requestRaw("/api/v1/admin/detection/alerts/count")
+  if (!res.ok) throw new ApiError("ERROR", `Erro HTTP ${res.status}`, res.status)
+  return Number(await res.text()) || 0
 }
 
 export async function fetchCriticalAlerts(): Promise<CriticalAlert[]> {
@@ -228,5 +379,3 @@ export async function createApiKey(name: string, scopes: string[]): Promise<{ id
 export async function revokeApiKey(id: string): Promise<void> {
   await api.patch(`/api/v1/admin/api-keys/${id}/revoke`)
 }
-
-export { getToken, clearToken }

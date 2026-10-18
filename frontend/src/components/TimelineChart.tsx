@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react"
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import { fetchTimeline, type TimelineItem } from "../services/api"
+import { useRefresh } from "../contexts/RefreshContext"
+import { EmptyBlock, ErrorBlock, LoadingBlock } from "./States"
 
 /** "14:00" -> "14h": shorter labels fit at the edges of the axis instead of being clipped. */
 function shortHour(value: string): string {
@@ -8,11 +10,31 @@ function shortHour(value: string): string {
 }
 
 export default function TimelineChart() {
+  const { signal, markUpdated, refresh } = useRefresh()
   const [data, setData] = useState<TimelineItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchTimeline().then(setData).catch((err) => console.error("timeline", err))
-  }, [])
+    let alive = true
+    setLoading(true)
+    setError(null)
+    fetchTimeline()
+      .then((items) => {
+        if (!alive) return
+        setData(items)
+        markUpdated()
+      })
+      .catch((err) => {
+        if (alive) setError(err instanceof Error ? err.message : "Falha ao carregar a linha do tempo")
+      })
+      .finally(() => {
+        if (alive) setLoading(false)
+      })
+    return () => {
+      alive = false
+    }
+  }, [signal, markUpdated])
 
   // With every bucket at zero a domain of [0, 0] renders as a broken axis; keep one step of headroom.
   const maxCount = Math.max(1, ...data.map((d) => d.count))
@@ -26,10 +48,12 @@ export default function TimelineChart() {
         </span>
       </div>
       <div className="h-52">
-        {data.length === 0 ? (
-          <div className="h-full flex items-center justify-center">
-            <p className="text-xs text-slate-400">Nenhum evento no período</p>
-          </div>
+        {loading ? (
+          <LoadingBlock />
+        ) : error ? (
+          <ErrorBlock message={error} onRetry={refresh} />
+        ) : data.length === 0 ? (
+          <EmptyBlock message="Nenhum evento no período" />
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data} margin={{ top: 5, right: 16, left: -18, bottom: 6 }}>

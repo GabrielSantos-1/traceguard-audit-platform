@@ -1,9 +1,9 @@
 import { useState } from "react"
-import { Shield, Eye, EyeOff } from "lucide-react"
+import { Shield, Eye, EyeOff, Clock } from "lucide-react"
 import { useAuth } from "../contexts/AuthContext"
 
 export default function LoginPage() {
-  const { login } = useAuth()
+  const { login, sessionNotice, clearSessionNotice } = useAuth()
   const [email, setEmail] = useState("admin@traceguard.local")
   const [password, setPassword] = useState("admin123")
   const [showPass, setShowPass] = useState(false)
@@ -13,6 +13,7 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
+    clearSessionNotice()
     setBusy(true)
     try {
       await login(email, password)
@@ -36,6 +37,13 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="rounded-xl bg-dark-900 border border-dark-800 p-6 space-y-4">
           <h2 className="text-sm font-semibold text-gray-200 text-center">Acessar Dashboard</h2>
+
+          {sessionNotice && !error && (
+            <div className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2 flex items-start gap-2">
+              <Clock className="w-3.5 h-3.5 mt-0.5 shrink-0" aria-hidden="true" />
+              <span>{sessionNotice}</span>
+            </div>
+          )}
 
           {error && (
             <div className="text-xs text-severity-critical bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">

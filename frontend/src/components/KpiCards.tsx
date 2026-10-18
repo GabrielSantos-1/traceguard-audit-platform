@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react"
 import { Activity, AlertTriangle, Users, Box } from "lucide-react"
 import { fetchKpi, type DashboardKpi } from "../services/api"
+import { useRefresh } from "../contexts/RefreshContext"
+import { ErrorBlock } from "./States"
 
 /**
  * How a rise in each metric should be read:
@@ -80,17 +82,34 @@ interface KpiItem {
 }
 
 export default function KpiCards() {
+  const { signal, markUpdated, refresh } = useRefresh()
   const [kpi, setKpi] = useState<DashboardKpi | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    let alive = true
+    setLoading(true)
+    setError(null)
     fetchKpi()
-      .then(setKpi)
-      .catch((err) => console.error("kpi", err))
-      .finally(() => setLoading(false))
-  }, [])
+      .then((data) => {
+        if (!alive) return
+        setKpi(data)
+        markUpdated()
+      })
+      .catch((err) => {
+        if (alive) setError(err instanceof Error ? err.message : "Falha ao carregar os indicadores")
+      })
+      .finally(() => {
+        if (alive) setLoading(false)
+      })
+    return () => {
+      alive = false
+    }
+  }, [signal, markUpdated])
 
   if (loading) return <KpiSkeleton />
+  if (error) return <ErrorBlock message={error} onRetry={refresh} />
 
   const items: KpiItem[] = [
     {

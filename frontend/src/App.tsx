@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useAuth } from "./contexts/AuthContext"
+import { RefreshProvider } from "./contexts/RefreshContext"
 import LoginPage from "./pages/LoginPage"
 import Header from "./components/Header"
 import Sidebar, { type PageId } from "./components/Sidebar"
@@ -48,8 +49,8 @@ export default function App() {
               <TimelineChart />
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              <RecentEvents />
-              <CriticalAlerts />
+              <RecentEvents onNavigate={setPage} />
+              <CriticalAlerts onNavigate={setPage} />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <Architecture />
@@ -71,14 +72,16 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen bg-dark-950 text-gray-100 font-sans antialiased">
-      <Sidebar activePage={page} onNavigate={setPage} />
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Header onNavigate={setPage} />
-        <main className="flex-1 overflow-y-auto p-5 space-y-5">
-          {renderPage()}
-        </main>
+    <RefreshProvider>
+      <div className="flex h-screen bg-dark-950 text-gray-100 font-sans antialiased">
+        <Sidebar activePage={page} onNavigate={setPage} />
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          <Header onNavigate={setPage} />
+          <main className="flex-1 overflow-y-auto p-5 space-y-5">
+            {renderPage()}
+          </main>
+        </div>
       </div>
-    </div>
+    </RefreshProvider>
   )
 }
