@@ -7,9 +7,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+/**
+ * Sends alert notifications by e-mail.
+ *
+ * <p>Registered only when mail is actually configured ({@code spring.mail.host}). Without this
+ * condition the bean would require a {@code JavaMailSender} that Spring Boot does not create when
+ * no mail host is set, and the whole application would fail to start — which is exactly what
+ * happened on every profile, including the documented "no Docker" quickstart.
+ */
 @Component
+@ConditionalOnProperty(prefix = "spring.mail", name = "host")
 public class EmailNotificationChannel implements NotificationChannel {
 
     private static final Logger log = LoggerFactory.getLogger(EmailNotificationChannel.class);

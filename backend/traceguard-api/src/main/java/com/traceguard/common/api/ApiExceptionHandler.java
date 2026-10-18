@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -57,6 +58,17 @@ public class ApiExceptionHandler {
             log.error("event=handled_error code={} path={} status={}", code, request.getRequestURI(), status.value());
         }
         return buildError(status, code, message, null, request);
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleNoResourceFound(
+            NoResourceFoundException ex,
+            HttpServletRequest request
+    ) {
+        // A missing static file (favicon, stray asset) or an unmapped path is a 404, not a server
+        // failure. Falling through to the generic handler turned every wrong URL into a 500.
+        log.warn("event=not_found path={} type={}", request.getRequestURI(), ex.getClass().getSimpleName());
+        return buildError(HttpStatus.NOT_FOUND, "NOT_FOUND", "Resource not found", null, request);
     }
 
     @ExceptionHandler(Exception.class)

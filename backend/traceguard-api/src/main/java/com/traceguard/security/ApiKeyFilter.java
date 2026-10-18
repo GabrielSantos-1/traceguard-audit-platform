@@ -27,9 +27,15 @@ public class ApiKeyFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = resolvePath(request);
-        return path.startsWith("/actuator/health")
-                || path.startsWith("/actuator/info")
-                || path.startsWith("/api/v1/auth")
+        // Browser-facing resources never carry an API key: the embedded dashboard, its static assets,
+        // the Swagger UI, the H2 console and the actuator endpoints are opened by a human in a browser,
+        // not called by a machine. Requiring a key here made the dashboard unreachable (every request
+        // returned 401 before the static handler was even reached) and would break the next asset added.
+        // Only API calls are subject to key authentication, and anything new under /api/v1/ fails closed.
+        if (!path.startsWith("/api/v1/")) {
+            return true;
+        }
+        return path.startsWith("/api/v1/auth")
                 || path.startsWith("/api/v1/admin");
     }
 
