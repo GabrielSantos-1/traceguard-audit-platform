@@ -96,9 +96,10 @@ export interface DashboardKpi {
   activeAlerts: number
   activeUsers: number
   totalTenants: number
-  eventsChangePercent: number
-  alertsChangePercent: number
-  usersChangePercent: number
+  /** null when the previous window was empty: there is no baseline to compute a change from. */
+  eventsChangePercent: number | null
+  alertsChangePercent: number | null
+  usersChangePercent: number | null
 }
 
 export interface SeverityItem {
@@ -154,6 +155,21 @@ export async function fetchTimeline(): Promise<TimelineItem[]> {
 export async function fetchRecentEvents(): Promise<RecentEvent[]> {
   const res = await api.get<RecentEvent[]>("/api/v1/admin/dashboard/recent-events")
   return res.data
+}
+
+/**
+ * Active alert count for the header badge.
+ *
+ * This endpoint answers a bare number instead of the usual {success, data, meta} envelope, so it
+ * cannot go through the shared request helper.
+ */
+export async function fetchActiveAlertCount(): Promise<number> {
+  const token = getToken()
+  const res = await fetch(`${API_BASE}/api/v1/admin/detection/alerts/count`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+  if (!res.ok) throw new ApiError("ERROR", `HTTP ${res.status}`, res.status)
+  return Number(await res.text())
 }
 
 export async function fetchCriticalAlerts(): Promise<CriticalAlert[]> {

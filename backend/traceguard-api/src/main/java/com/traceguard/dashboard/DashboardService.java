@@ -46,14 +46,30 @@ public class DashboardService {
         long activeUsers = userAccountRepository.countByStatus(UserStatus.ACTIVE);
         long totalTenants = tenantRepository.count();
 
-        double eventsChange = eventsPrevious == 0 ? 100.0
-                : Math.round(((double) (events24h - eventsPrevious) / eventsPrevious) * 1000.0) / 10.0;
-        double alertsChange = alertsPrevious == 0 ? 100.0
-                : Math.round(((double) (alerts24h - alertsPrevious) / alertsPrevious) * 1000.0) / 10.0;
-        double usersChange = 0;
+        Double eventsChange = changePercent(events24h, eventsPrevious);
+        Double alertsChange = changePercent(alerts24h, alertsPrevious);
+
+        // There is no history of user status, so no baseline exists to compare against.
+        // null means "cannot be computed" and the dashboard renders "—" instead of inventing 0%.
+        Double usersChange = null;
 
         return new DashboardKpiResponse(events24h, alerts24h, activeUsers, totalTenants,
                 eventsChange, alertsChange, usersChange);
+    }
+
+    /**
+     * Percentage change of the current window against the previous one.
+     *
+     * <p>Returns {@code null} when the previous window was empty and the current one is not: there is
+     * no baseline to compare against, and the previous implementation answered {@code 100.0} in that
+     * case, so the dashboard reported "100% growth" on a period that had zero events — in both windows.
+     * Zero over zero is a real "no change" and returns {@code 0}.
+     */
+    private static Double changePercent(long current, long previous) {
+        if (previous == 0) {
+            return current == 0 ? 0.0 : null;
+        }
+        return Math.round(((double) (current - previous) / previous) * 1000.0) / 10.0;
     }
 
     public List<SeverityDistributionItem> getSeverityDistribution(UUID tenantId) {

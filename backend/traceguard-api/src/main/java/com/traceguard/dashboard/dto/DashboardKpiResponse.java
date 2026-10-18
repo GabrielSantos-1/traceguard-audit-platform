@@ -7,7 +7,7 @@ public record DashboardKpiResponse(
         long activeAlerts,
         long activeUsers,
         long totalTenants,
-        double eventsChangePercent,
-        double alertsChangePercent,
-        double usersChangePercent
+        Double eventsChangePercent,
+        Double alertsChangePercent,
+        Double usersChangePercent
 ) {}
